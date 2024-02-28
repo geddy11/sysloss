@@ -1,2 +1,2 @@
 # systemLoss
-System analysis of electronic circuits
+System analysis of electronic circuits and systems.
