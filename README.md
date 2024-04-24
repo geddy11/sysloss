@@ -1,5 +1,5 @@
 
-![sysLoss logo](docs/sysloss.svg)
+![](https://github.com/geddy11/sysloss/raw/main/docs/sysloss.svg)
 
 <p align="center">
 <a href="https://github.com/geddy11/sysloss/actions"><img alt="Actions Status" src="https://github.com/geddy11/sysloss/actions/workflows/ci-cd.yml/badge.svg"></a>
@@ -42,7 +42,7 @@ Bluetooth sensor
 ```python
 bts.solve()
 ```
-![result](docs/bts.png)
+![result](https://github.com/geddy11/sysloss/raw/main/docs/bts.png)
 
 ## Contributing
 
