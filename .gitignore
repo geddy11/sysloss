@@ -1,3 +1,7 @@
+*.json
+!tests/data/*.json
+work
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -70,6 +74,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/jupyter_execute
+docs/conf.py
+docs/nb/*.toml
 
 # PyBuilder
 target/
@@ -140,6 +147,3 @@ dmypy.json
 
 # MacOS
 .DS_Store
-
-# Various
-work

@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: sysLoss
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Geir
+    family-names: Drange
+    affiliation: Inventas AS
+    orcid: 'https://orcid.org/0009-0009-6795-8583'
+repository-code: 'https://github.com/geddy11/sysloss'
+url: 'https://github.com/geddy11/sysloss'
+abstract: sysLoss is a tool for analyzing system power and losses.
+keywords:
+  - system
+  - power
+  - loss
+license: MIT
+version: 1.0.0

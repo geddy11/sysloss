@@ -10,12 +10,12 @@ jobs:
     # Define job steps
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Check-out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install poetry
         uses: snok/install-poetry@v1
@@ -23,16 +23,30 @@ jobs:
       - name: Install package
         run: poetry install
 
+      - name: Linter
+        uses: psf/black@stable
+
       - name: Test with pytest
         run: poetry run pytest tests/ --cov=sysloss --cov-report=xml
 
       - name: Use Codecov to track coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4.0.1
         with:
-          files: ./coverage.xml   # coverage report
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: geddy11/sysloss
+          #files: ./coverage.xml   # coverage report (dont enable)
+
+      # - name: Coverage badge
+      #   uses: tj-actions/coverage-badge-py@v2
+
+      - name: Install  Jupyter-book
+        run: pip install jupyter-book==1.0.0 sphinx-autoapi matplotlib toml scipy rich rustworkx pandas numpy
+
+      - name: Create Sphinx configuration
+        run: jupyter-book config sphinx docs
 
       - name: Build documentation
-        run: poetry run make html --directory docs/
+        run: sphinx-build docs docs/_build/html -b html
 
   cd:
     permissions:
@@ -51,12 +65,12 @@ jobs:
     # Define job steps
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Check-out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -92,3 +106,5 @@ jobs:
         if: steps.release.outputs.released == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  

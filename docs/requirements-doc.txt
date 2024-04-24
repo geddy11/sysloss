@@ -1,4 +1,6 @@
 jupyter-book
 matplotlib
+pandas
 numpy
-ghp-import
+toml
+runsworkx
