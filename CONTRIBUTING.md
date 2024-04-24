@@ -63,9 +63,11 @@ Ready to contribute? Here's how to set up `sysloss` for local development.
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. The pull request should include additional tests if appropriate.
-2. If the pull request adds functionality, the docs should be updated.
-3. The pull request should work for all currently supported operating systems and versions of Python.
+1. Use Black code formatter (formatting is checked in the CI pipeline).
+2. The pull request should include additional tests if appropriate. Code coverage shall be 100%.
+3. If the pull request adds functionality, the docs shall be updated.
+4. The pull request should work for all currently supported operating systems and versions of Python.
+5. Tutorials shall not contain references to or mentions of specific vendors, products or components.
 
 ## Code of Conduct
 

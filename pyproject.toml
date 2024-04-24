@@ -1,16 +1,41 @@
 [tool.poetry]
 name = "sysloss"
-version = "0.1.0"
+version = "0.0.0"
 description = "Power analysis of circuits and systems."
 authors = ["Geir Drange"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
+scipy = "^1.9.0"
+pandas = "^2.0.0"
+rustworkx = "^0.13.0"
+rich = "^12.0.0"
+toml = "^0.10.2"
+matplotlib = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.0.0"
+matplotlib = "^3.0.0"
+jupyter-book = "^1.0.0"
+toml = "^0.10.2"
+pandas = "^2.0.0"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+scipy = "^1.9.0"
+pandas = "^2.0.0"
+rustworkx = "^0.13.0"
+rich = "^12.0.0"
+toml = "^0.10.2"
+matplotlib = "^3.0.0"
+
 [tool.semantic_release]
+allow_zero_version = false
 version_toml = [
     "pyproject.toml:tool.poetry.version",
 ]                                                    # version location
@@ -21,3 +46,9 @@ build_command = "pip install poetry && poetry build" # build dists
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+#addopts = [
+#    "--import-mode=importlib",
+#]
+pythonpath = "src"

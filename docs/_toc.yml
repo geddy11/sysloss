@@ -2,8 +2,13 @@
 # Learn more at https://jupyterbook.org/customize/toc.html
 
 format: jb-book
-root: intro
+root: Getting started
 chapters:
-- file: markdown
-- file: notebooks
-- file: markdown-notebooks
+- file: autoapi/index
+- file: nb/Component files
+- file: tutorials
+  sections:
+  - file: nb/Bluetooth sensor
+  - file: nb/Sensor daisy chain
+  - file: nb/PCIe FPGA
+  - file: nb/Datacenter rack
