@@ -2,7 +2,8 @@
 ![sysLoss logo](docs/sysloss.svg)
 
 <p align="center">
-<a href="https://github.com/geddy11/tmp_sl/actions"><img alt="Actions Status" src="https://github.com/geddy11/tmp_sl/actions/workflows/ci-cd.yml/badge.svg"></a>
+<a href="https://github.com/geddy11/sysloss/actions"><img alt="Actions Status" src="https://github.com/geddy11/sysloss/actions/workflows/ci-cd.yml/badge.svg"></a>
+<a href="https://codecov.io/github/geddy11/sysloss"><img src="https://codecov.io/github/geddy11/sysloss/graph/badge.svg?token=9L1ZMN0UET"/></a>
 <a><img alt="PyPI" src="https://img.shields.io/pypi/v/sysloss"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://www.conventionalcommits.org"><img alt="Conv. commits" src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white"></a>
