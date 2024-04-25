@@ -44,6 +44,9 @@ bts.solve()
 ```
 ![result](https://github.com/geddy11/sysloss/raw/main/docs/bts.png)
 
+## Documentation
+The [documentation](https://sysloss.readthedocs.io/en/latest/Getting%20started.html) includes tutorials in the form of Jupyter notebooks, located in docs/nb.
+
 ## Contributing
 
 Interested in contributing? Check out the contributing guidelines. Please note that this project is released with a Code of Conduct. By contributing to this project, you agree to abide by its terms.
