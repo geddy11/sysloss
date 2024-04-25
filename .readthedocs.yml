@@ -14,7 +14,7 @@ build:
     post_create_environment:
       # Install poetry
       # https://python-poetry.org/docs/#installing-manually
-      - pip install poetry jupyter-book sphinx-autoapi toml
+      - pip install poetry jupyter-book sphinx-autoapi toml numpy pandas rustworkx scipy rich matplotlib
       # Tell poetry to not use a virtual environment
       - poetry config virtualenvs.create false
     post_install:
