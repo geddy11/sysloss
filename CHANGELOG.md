@@ -2,6 +2,45 @@
 
 
 
+## v1.0.1 (2024-04-29)
+
+### Build
+
+* build(rtd): add more missing packages uses by sysLoss to rtd pipeline ([`c52c71b`](https://github.com/geddy11/sysloss/commit/c52c71b78957945a73b5bc48da8cd2e3a7f46a1a))
+
+* build(rtd): add toml to build environment ([`a10be49`](https://github.com/geddy11/sysloss/commit/a10be49ef4b74cb4217e6a3299868355aeb28b8b))
+
+* build(pypi): add links to repo and readthedocs ([`e838996`](https://github.com/geddy11/sysloss/commit/e8389968d83587140253b970cc2d756bccf20d4f))
+
+* build(rtd): add sphinx-autoapi installation ([`fd30dc8`](https://github.com/geddy11/sysloss/commit/fd30dc8ba1124fee5da185333cc3c0083579f747))
+
+* build(rtd): add jupyter-book to config ([`c16bcc9`](https://github.com/geddy11/sysloss/commit/c16bcc91a90a336050451bddf55f657e66319511))
+
+### Documentation
+
+* docs: rename code of conduct file ([`f8ce2bb`](https://github.com/geddy11/sysloss/commit/f8ce2bb3be5579a7b00519287efef30c627a7665))
+
+* docs: change README.md image links to github ([`852ca43`](https://github.com/geddy11/sysloss/commit/852ca4381b367c9eebf9bf4cbcab1959c25e5c50))
+
+### Fix
+
+* fix: add __version__ to package ([`056c259`](https://github.com/geddy11/sysloss/commit/056c2593f93c453b18b0b962ca8500240f987bff))
+
+### Unknown
+
+* Update issue templates ([`ffaa63e`](https://github.com/geddy11/sysloss/commit/ffaa63eb0c96275318bfc5caaf743aa431fa79ca))
+
+* Update issue templates ([`c3281ca`](https://github.com/geddy11/sysloss/commit/c3281ca6ea09812528b83b0f537925fc24e33e27))
+
+* Merge pull request #4 from geddy11/pypi
+
+docs: change image links in readme to absolute ([`bd60345`](https://github.com/geddy11/sysloss/commit/bd60345cb0f2f97bef563c5f236cd0deb98f2bdc))
+
+* Merge pull request #3 from geddy11/rtd
+
+build: fix readthedocs build ([`d738550`](https://github.com/geddy11/sysloss/commit/d73855035e6256706a9371e78534158ca27792f6))
+
+
 ## v1.0.0 (2024-04-24)
 
 ### Chore
