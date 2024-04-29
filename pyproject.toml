@@ -43,7 +43,7 @@ allow_zero_version = false
 version_toml = [
     "pyproject.toml:tool.poetry.version",
 ]                                                    # version location
-version_variable = [
+version_variables = [
     "src/sysloss/__init__.py:__version__"
 ]
 branch = "main"                                      # branch to make releases of
