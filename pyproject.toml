@@ -11,7 +11,7 @@ documentation = "https://sysloss.readthedocs.io/en/latest/Getting%20started.html
 keywords = ["system", "power" , "loss", "efficiency", "energy", "component"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 scipy = "^1.9.0"
 pandas = "^2.0.0"
 rustworkx = "^0.13.0"
@@ -26,6 +26,7 @@ matplotlib = "^3.0.0"
 jupyter-book = "^1.0.0"
 toml = "^0.10.2"
 pandas = "^2.0.0"
+tqdm = "^4.63.0"
 
 [tool.poetry.group.docs]
 optional = true
@@ -37,6 +38,7 @@ rustworkx = "^0.13.0"
 rich = "^12.0.0"
 toml = "^0.10.2"
 matplotlib = "^3.0.0"
+tqdm = "^4.63.0"
 
 [tool.semantic_release]
 allow_zero_version = false
