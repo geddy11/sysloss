@@ -32,6 +32,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
 from scipy.interpolate import LinearNDInterpolator
+from typing import Callable
+from tqdm import tqdm
 from sysloss.components import *
 from sysloss.components import (
     _ComponentTypes,
@@ -44,6 +46,7 @@ from sysloss.components import (
     RS_DEFAULT,
     LIMITS_DEFAULT,
 )
+import sysloss
 
 
 class System:
@@ -618,7 +621,7 @@ class System:
         quiet: bool = True,
         phase: str = "",
         energy: bool = False,
-        tags: dict = {}
+        tags: dict = {},
     ) -> pd.DataFrame:
         """Analyze steady-state of system.
 
@@ -949,7 +952,7 @@ class System:
             If the dict contains less than two load phases or 'N/A' is used as
             a phase name.
         """
-        if len(list(phases.keys())) < 2:
+        if len(list(phases.keys())) < 2 and phases != {}:
             raise ValueError("There must be at least two phases!")
         if "N/A" in list(phases.keys()):
             raise ValueError('"N/A" is a reserved name!')
@@ -1097,11 +1100,11 @@ class System:
         sys = {
             "system": {
                 "name": self._g.attrs["name"],
-                "version": "1.0.0",
+                "version": sysloss.__version__,
                 "phases": self._g.attrs["phases"],
                 "phase_conf": self._g.attrs["phase_conf"],
             }
-        }  # TODO: version
+        }
         ridx = self._get_sources()
         root = [self._g[n]._params["name"] for n in ridx]
         for r in range(len(ridx)):
@@ -1135,7 +1138,7 @@ class System:
         *,
         cmap: matplotlib.colors.Colormap = "viridis",
         inpdata: bool = True,
-        plot3d: bool = False
+        plot3d: bool = False,
     ) -> matplotlib.figure.Figure | None:
         """Plot 1D or 2D interpolation data.
 
@@ -1250,3 +1253,105 @@ class System:
         else:
             print("Component does not have interpolation data")
             return None
+
+    def batt_life(
+        self,
+        battery: str,
+        *,
+        cutoff: float,
+        pfunc: Callable[[], tuple[float, float, float]],
+        dfunc: Callable[[float, float], tuple[float, float, float]],
+    ) -> pd.DataFrame:
+        """Estimate battery life.
+
+        Battery life estimation requires an external battery model. The battery model is
+        accessed using two callback functions - one for battery probing and one for
+        battery depletion. If system load phases have been defined, the estimation process
+        loops through the phases until the battery is depleted or the cutoff voltage has been
+        reached. In a system without load phases the process depletes the battery in ~1000
+        time steps.
+
+        Parameters
+        ----------
+        battery : str
+            Name of battery (source) to be depleted
+        cutoff : float
+            End simulation when battery voltage reaches cutoff or capacity is depleted,
+            whichever comes first.
+        pfunc : Callable[[], tuple[float, float, float]]
+            Battery probe callback function, must return tuple with remaining capacity (Ah),
+            battery voltage (V) and battery impedance (Ohm)
+        dfunc : Callable[[float, float], tuple[float, float, float]]
+            Battery deplete callback function. Function arguments are time (s) and
+            current (A). Must return tuple with same format as pfunc.
+
+        Returns
+        -------
+        pd.DataFrame
+            Battery depletion data.
+
+        Raises
+        ------
+        ValueError
+            If battery name is not found or component is not a source.
+        """
+        # check for valid source
+        self._chk_parent(battery)
+        pidx = self._get_index(battery)
+        if not isinstance(self._g[pidx], Source):
+            raise ValueError("Battery must be a source!")
+        # keep current source params
+        vo_org = self._g[pidx]._params["vo"]
+        rs_org = self._g[pidx]._params["rs"]
+        # probe/deplete returns (capacity, voltage, rs)
+        state = pfunc()
+        t = [0.0]
+        cap = [state[0]]
+        volt = [state[1]]
+        rs = [state[2]]
+        phase_list = [""]
+        if len(list(self._g.attrs["phases"].keys())) > 0:
+            phase_list = list(self._g.attrs["phases"].keys())
+        # deplete args: time, current
+        unit, mult = "Ah", 1.0
+        if state[0] < 100.0:
+            unit, mult = "mAh", 1000.0
+        self._rel_update()
+        cdelta = 0.0
+        phidx = 0
+        with tqdm(
+            range(int(mult * cap[0])),
+            desc="Battery depletion ({})".format(unit),
+            unit=unit,
+            unit_scale=True,
+            unit_divisor=1000,
+        ) as pbar:
+            while state[0] > 0.0 and state[1] > cutoff:
+                self._g[pidx]._params["vo"] = state[1]
+                self._g[pidx]._params["rs"] = state[2]
+                _, i, _ = self._solve(phase=phase_list[phidx])
+                if phase_list == [""]:
+                    deltat = (cap[0] / i[pidx]) * 3.6
+                else:
+                    deltat = self._g.attrs["phases"][phase_list[phidx]]
+                state = dfunc(deltat, i[pidx])
+                cdelta += (cap[-1] - state[0]) * mult
+                pbar.update(int(cdelta))
+                cdelta -= int(cdelta)
+                phidx = (phidx + 1) % len(phase_list)
+                if state[0] > 0.0 and state[1] > cutoff:
+                    t += [t[-1] + deltat]
+                    cap += [state[0]]
+                    volt += [state[1]]
+                    rs += [state[2]]
+            pbar.close()
+        # restore source params
+        self._g[pidx]._params["vo"] = vo_org
+        self._g[pidx]._params["rs"] = rs_org
+        # result
+        res = {}
+        res["Time (s)"] = t
+        res["Capacity (Ah)"] = cap
+        res["Voltage (V)"] = volt
+        res["Resistance (Ohm)"] = rs
+        return pd.DataFrame(res)

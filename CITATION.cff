@@ -9,6 +9,9 @@ authors:
     family-names: Drange
     affiliation: Inventas AS
     orcid: 'https://orcid.org/0009-0009-6795-8583'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.11086060
 repository-code: 'https://github.com/geddy11/sysloss'
 url: 'https://github.com/geddy11/sysloss'
 abstract: sysLoss is a tool for analyzing system power and losses.
@@ -17,4 +20,4 @@ keywords:
   - power
   - loss
 license: MIT
-version: 1.0.0
+version: 1.1.0
