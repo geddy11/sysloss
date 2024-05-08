@@ -367,3 +367,39 @@ def test_case16():
     assert (
         type(case16.plot_interp("Diode 2")) == matplotlib.figure.Figure
     ), "Case16 Diode 2D figure"
+
+
+cap = 0.15
+
+
+def probe():
+    global cap
+    return (0.15, 3.6, 0.0)
+
+
+def deplete(time, curr):
+    global cap
+    cap -= time * curr / 3600.0
+    if cap < 0.0:
+        cap = 0.0
+        return (0.0, 0.0, 0.0)
+    return (cap, 3.6, 0.0)
+
+
+def test_case17():
+    """Test battery life function"""
+    case17 = System("Case17 system", Source("LiPo", vo=3.6))
+    case17.add_comp("LiPo", comp=Converter("Buck 1.8V", vo=1.8, eff=0.91))
+    case17.add_comp("Buck 1.8V", comp=PLoad("MCU", pwr=0.125))
+    with pytest.raises(ValueError):
+        cap = 0.15
+        case17.batt_life("MCU", cutoff=2.9, pfunc=probe, dfunc=deplete)
+    bdf = case17.batt_life("LiPo", cutoff=2.9, pfunc=probe, dfunc=deplete)
+    assert bdf.shape[1] == 4, "Case17 result columns"
+    assert bdf.shape[0] == 1000, "Case17 result rows"
+    case17_phases = {"sleep": 120, "run": 45}
+    case17.set_sys_phases(case17_phases)
+    case17.set_comp_phases("MCU", phase_conf={"sleep": 0.05, "run": 0.13})
+    cap = 0.15
+    bdf = case17.batt_life("LiPo", cutoff=2.9, pfunc=probe, dfunc=deplete)
+    assert bdf.shape[0] < 1000, "Case17 result columns with load phases"

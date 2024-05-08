@@ -40,18 +40,13 @@ html:
 sphinx:
   extra_extensions:
     - 'autoapi.extension'
-#    - 'sphinx.ext.autodoc'
     - 'sphinx.ext.napoleon'
     - 'sphinx.ext.viewcode'
-#    - 'sphinx_external_toc'
-#    - 'sphinx.ext.autosummary'
-  config:
-#    autosummary_generate: True
-
+    - 'sphinxcontrib.bibtex'
   config:
     autoapi_dirs: ["../src"]  # location to parse for API reference
     autoapi_options: 
       ['members', 'undoc-members']
-    #external_toc_path: "docs/_toc.yml"
     #html_theme: "sphinx_rtd_theme"
     add_module_names: False
+    bibtex_bibfiles: ['references.bib']
