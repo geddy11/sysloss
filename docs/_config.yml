@@ -42,12 +42,11 @@ sphinx:
     - 'autoapi.extension'
     - 'sphinx.ext.napoleon'
     - 'sphinx.ext.viewcode'
-  config:
-#    autosummary_generate: True
-
+    - 'sphinxcontrib.bibtex'
   config:
     autoapi_dirs: ["../src"]  # location to parse for API reference
     autoapi_options: 
       ['members', 'undoc-members']
     #html_theme: "sphinx_rtd_theme"
     add_module_names: False
+    bibtex_bibfiles: ['references.bib']

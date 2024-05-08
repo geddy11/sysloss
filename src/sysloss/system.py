@@ -33,7 +33,12 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
 from scipy.interpolate import LinearNDInterpolator
 from typing import Callable
-from tqdm import tqdm
+import warnings
+from tqdm import TqdmExperimentalWarning
+
+warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
+from tqdm.autonotebook import tqdm
+
 from sysloss.components import *
 from sysloss.components import (
     _ComponentTypes,
@@ -665,7 +670,7 @@ class System:
         elif len(list(self._g.attrs["phases"].keys())) > 0:
             phase_list = list(self._g.attrs["phases"].keys())
         # solve
-        ppwr, ploss, peff, ptime, pener = [], [], [], [], []
+        ppwr, ploss, peff, ptime, pener, pcurr = [], [], [], [], [], []
         frames = []
         for ph in phase_list:
             v, i, iters = self._solve(vtol, itol, maxiter, quiet, ph)
@@ -782,10 +787,14 @@ class System:
             res["Warnings"] = warn
             df = pd.DataFrame(res)
 
-            # update subsystem power/loss/efficiency/energy
+            # update subsystem current/power/loss/efficiency/energy
             for d in range(len(sources)):
                 src = list(sources.keys())[d]
                 idx = df[df.Component == "Subsystem {}".format(src)].index[0]
+                curr = df[(df.Domain == src) & (df.Type == "SOURCE")][
+                    "Iout (A)"
+                ].values[0]
+                df.at[idx, "Iout (A)"] = curr
                 pwr = df[(df.Domain == src) & (df.Type == "SOURCE")][
                     "Power (W)"
                 ].values[0]
@@ -805,13 +814,15 @@ class System:
             df.at[idx, "Efficiency (%)"] = _get_eff(pwr, pwr - loss)
             if energy:
                 df.at[idx, "24h energy (Wh)"] = self._calc_energy(ph, pwr)
+            if len(sources) < 2:
+                df.at[idx, "Iout (A)"] = curr
             if len(phase_list) > 1:
                 ploss += [loss]
                 ppwr += [pwr]
                 peff += [_get_eff(pwr, pwr - loss)]
+                pcurr += [curr]
                 ptime += [self._g.attrs["phases"][ph]]
                 pener += [self._calc_energy(ph, pwr)]
-
             # if only one subsystem, delete subsystem row and domain column
             if len(sources) < 2:
                 df.drop(len(df) - 2, inplace=True)
@@ -824,8 +835,12 @@ class System:
             apwr = np.sum(np.multiply(np.asarray(ppwr), np.asarray(ptime))) / ttot
             aloss = np.sum(np.multiply(np.asarray(ploss), np.asarray(ptime))) / ttot
             aeff = np.sum(np.multiply(np.asarray(peff), np.asarray(ptime))) / ttot
+            acurr = np.sum(np.multiply(np.asarray(pcurr), np.asarray(ptime))) / ttot
             vals = ["System average", apwr, aloss, aeff]
             idxs = ["Component", "Power (W)", "Loss (W)", "Efficiency (%)"]
+            if len(sources) < 2:
+                vals += [acurr]
+                idxs += ["Iout (A)"]
             if energy:
                 vals += [self._calc_energy("", apwr)]
                 idxs += ["24h energy (Wh)"]
@@ -1344,6 +1359,7 @@ class System:
                     cap += [state[0]]
                     volt += [state[1]]
                     rs += [state[2]]
+            pbar.total = int(mult * cap[0] - cdelta)
             pbar.close()
         # restore source params
         self._g[pidx]._params["vo"] = vo_org
