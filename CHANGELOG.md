@@ -2,6 +2,33 @@
 
 
 
+## v1.1.0 (2024-05-08)
+
+### Build
+
+* build: fix semver version_variables name in pyproject.toml ([`76d1c72`](https://github.com/geddy11/sysloss/commit/76d1c727752d140cb0b97b0985651e40947537d2))
+
+### Documentation
+
+* docs: add battery life estimation tutorial ([`6b0243c`](https://github.com/geddy11/sysloss/commit/6b0243c8ee9ee1a4f7676e24790a3325ae7019f9))
+
+* docs: add Zendo DOI to README.md ([`c19928d`](https://github.com/geddy11/sysloss/commit/c19928d77b6efc40a0c3c398f2c1d15cccf1f618))
+
+### Feature
+
+* feat(system): new method .batt_life() to estimate battery lifetime ([`b48d429`](https://github.com/geddy11/sysloss/commit/b48d429a07c43de899f326e3b724de5e86b4e181))
+
+### Fix
+
+* fix: relax python version requirement to 3.10 ([`63acad9`](https://github.com/geddy11/sysloss/commit/63acad9c7d59c70534413ba676d056e7e9d6f405))
+
+### Unknown
+
+* Merge pull request #5 from geddy11/battsim
+
+Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1f999f81febf4712e6bcfc8d2917e3f241749281))
+
+
 ## v1.0.1 (2024-04-29)
 
 ### Build
