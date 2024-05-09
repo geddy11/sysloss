@@ -7,7 +7,7 @@
 <a><img alt="PyPI" src="https://img.shields.io/pypi/v/sysloss"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://www.conventionalcommits.org"><img alt="Conv. commits" src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white"></a>
-<a href="https://doi.org/10.5281/zenodo.11086061"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11086061.svg" alt="DOI"></a>
+<a href="https://doi.org/10.5281/zenodo.11086060"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11086060.svg" alt="DOI"></a>
 </p>
 
 # sysLoss
