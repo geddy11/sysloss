@@ -17,6 +17,10 @@ sysLoss is a tool for analyzing system power and losses. From the smallest IoT s
 ```bash
 $ pip install sysloss
 ```
+or
+```bash
+$ conda install conda-forge::sysloss
+```
 
 ## Usage
 ```python

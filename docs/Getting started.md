@@ -11,6 +11,11 @@ Upgrade to the latest release with:
 $ pip install --upgrade sysloss
 ```
 
+Or install with conda:
+```bash
+$ conda install conda-forge::sysloss
+```
+
 ## First system model
 A simple, battery-powered Bluetooth sensor can be defined as simple as this:
 ```python
