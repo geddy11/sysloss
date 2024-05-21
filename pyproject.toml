@@ -12,7 +12,7 @@ keywords = ["system", "power" , "loss", "efficiency", "energy", "component"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-scipy = "^1.9."
+scipy = "^1.9"
 pandas = "^2.0"
 rustworkx = "^0.13"
 rich = "^12.0"
