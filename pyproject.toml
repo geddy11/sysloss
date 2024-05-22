@@ -14,20 +14,20 @@ keywords = ["system", "power" , "loss", "efficiency", "energy", "component"]
 python = "^3.10"
 scipy = "^1.9"
 pandas = "^2.0"
-rustworkx = "^0.13"
-rich = "^12.0"
-toml = "^0.10.2"
+rustworkx = ">=0.13"
+rich = ">=12.0"
+toml = ">=0.10.2"
 matplotlib = "^3.0"
-tqdm = "^4.63"
+tqdm = ">=4.63"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.0"
 pytest-cov = "^4.0"
 matplotlib = "^3.0"
 jupyter-book = "^1.0.0"
-toml = "^0.10.2"
+toml = ">=0.10.2"
 pandas = "^2.0"
-tqdm = "^4.63"
+tqdm = ">=4.63"
 
 [tool.poetry.group.docs]
 optional = true
@@ -35,11 +35,11 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 scipy = "^1.9"
 pandas = "^2.0"
-rustworkx = "^0.13"
-rich = "^12.0"
-toml = "^0.10.2"
+rustworkx = ">=0.13"
+rich = ">=12.0"
+toml = ">=0.10.2"
 matplotlib = "^3.0"
-tqdm = "^4.63"
+tqdm = ">=4.63"
 
 [tool.semantic_release]
 allow_zero_version = false
