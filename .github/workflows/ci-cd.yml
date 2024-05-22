@@ -39,7 +39,7 @@ jobs:
       # - name: Coverage badge
       #   uses: tj-actions/coverage-badge-py@v2
 
-      - name: Install  Jupyter-book
+      - name: Install Jupyter-book
         run: pip install jupyter-book==1.0.0 sphinx-autoapi matplotlib toml scipy rich rustworkx pandas numpy
 
       - name: Create Sphinx configuration
@@ -108,4 +108,18 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install grayscull
+        run: pip install grayskull
+
+      - name: Create receipe
+        run: grayskull pypi sysloss
+
+      - name: Update author in receipe
+        run: sed -i 's/AddYourGitHubIdHere/geddy11/g' ./sysloss/meta.yaml
+
+      - name: Get receipe
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda
+          path: ./sysloss
   
