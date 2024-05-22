@@ -2,6 +2,45 @@
 
 
 
+## v1.1.1 (2024-05-22)
+
+### Build
+
+* build: relax package dependencies ([`33eb1b1`](https://github.com/geddy11/sysloss/commit/33eb1b1dbdd03d84c6ca241c313787c0f5828ebc))
+
+* build: fix more dependency errors ([`6de316f`](https://github.com/geddy11/sysloss/commit/6de316f9b0e2c77be793bbdab1ee1e8558b85f1a))
+
+* build: fix dependency error ([`5d0e63f`](https://github.com/geddy11/sysloss/commit/5d0e63f51b6c9abf87a3bc842a437425c53ad604))
+
+* build: add missing dependency of tqdm ([`4d01006`](https://github.com/geddy11/sysloss/commit/4d01006487db2e903231c230bca2ad64c19052d7))
+
+* build(rtd): skip jupyter update ([`5f0a7f3`](https://github.com/geddy11/sysloss/commit/5f0a7f3347b6bbae020bd17fd45d6f9ba610eefc))
+
+* build(docs): add ipywidgets to .readthedocs.yml ([`07d5273`](https://github.com/geddy11/sysloss/commit/07d52739272cc3aa595821c894880865c80a8486))
+
+### Ci
+
+* ci: change id in conda receipe ([`87513c3`](https://github.com/geddy11/sysloss/commit/87513c3b7cdba7ddb24ea9976534d2fa1607369b))
+
+### Documentation
+
+* docs: extend battery life notebook with new chapter on battery life optimization ([`230f4f4`](https://github.com/geddy11/sysloss/commit/230f4f4e92a83d5e7e00ac3f9e8b12bd1e12dd56))
+
+* docs: hide output of cell in sensor daisy chain notebook ([`1cb8c0f`](https://github.com/geddy11/sysloss/commit/1cb8c0fe43f05234754397c0b83ee54e5e9f0e5a))
+
+* docs: change DOI to &#34;all versions&#34; in README.md ([`1d354bc`](https://github.com/geddy11/sysloss/commit/1d354bc46d0d89d0c28534c8257cfd8eb74aaea9))
+
+* docs: remove cell output in battery life notebook ([`120af8d`](https://github.com/geddy11/sysloss/commit/120af8d8d487d06201c798edda21d0cf5a752868))
+
+* docs: hide output of cell in battery life notebook ([`d3b4778`](https://github.com/geddy11/sysloss/commit/d3b477872fdf4ab4aaf138b3fa7cc94fae204e6f))
+
+* docs: cleanup battery life notebook ([`2719bc5`](https://github.com/geddy11/sysloss/commit/2719bc5090a97e79d086f6e99fd68a8af5c328ea))
+
+### Fix
+
+* fix: print tree in .tree() method to make it show in terminal mode ([`d2b43e3`](https://github.com/geddy11/sysloss/commit/d2b43e31fded161c4122b1bb61ed1486b2ee4818))
+
+
 ## v1.1.0 (2024-05-08)
 
 ### Build
