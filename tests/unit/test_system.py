@@ -61,12 +61,10 @@ def test_case1():
     case1.save("tests/unit/case1.json")
     dfp = case1.params(limits=True)
     assert len(dfp) == rows - 1, "Case1 parameters row count"
-    t = case1.tree()
-    assert type(t) == rich.tree.Tree, "Case1 tree output"
+    assert case1.tree() == None, "Case1 tree output"
     with pytest.raises(ValueError):
         case1.tree("Dummy")
-    t = case1.tree("5V boost")
-    assert type(t) == rich.tree.Tree, "Case1 subtree output"
+    assert case1.tree("5V boost") == None, "Case1 subtree output"
     edata = {"vi": [3.6], "io": [0.1, 0.4, 0.6, 0.9], "eff": [[0.3, 0.4, 0.67, 0.89]]}
     case1.change_comp(
         "1.8V buck", comp=Converter("1.8V buck", vo=1.8, eff=edata, iq=12e-6)

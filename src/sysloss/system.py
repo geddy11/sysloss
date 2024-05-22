@@ -26,6 +26,7 @@
 import rustworkx as rx
 import numpy as np
 from rich.tree import Tree
+from rich import print
 import json
 import pandas as pd
 import matplotlib
@@ -436,11 +437,6 @@ class System:
         name : str, optional
             Name of component to start with. If not given, print the entire system., by default ""
 
-        Returns
-        -------
-        rich.tree.Tree
-            System Tree class.
-
         Raises
         ------
         ValueError
@@ -464,7 +460,7 @@ class System:
                     c += [j._params["name"]]
                 ndict[i[0]._params["name"]] = c
             t.add(self._make_rtree(ndict, n))
-        return t
+        print(t)
 
     def _set_phase_lkup(self):
         """Make lookup from node # to load phases"""
