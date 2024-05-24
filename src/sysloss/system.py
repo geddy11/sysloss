@@ -1196,10 +1196,17 @@ class System:
                 )
                 plt.legend(loc="lower right")
             plt.xlabel("Output current (A)")
-            if "vo" in self._g[n]._params:
+            if self._g[n]._component_type.name == "CONVERTER":
                 plt.ylabel("Efficiency")
                 plt.title(
                     "{} efficiency for Vo={}V".format(name, self._g[n]._params["vo"])
+                )
+            elif self._g[n]._component_type.name == "LINREG":
+                plt.ylabel("Ground current (A)")
+                plt.title(
+                    "{} ground current for Vo={}V".format(
+                        name, self._g[n]._params["vo"]
+                    )
                 )
             else:
                 plt.ylabel("Voltage drop (V)")
@@ -1239,7 +1246,10 @@ class System:
                 surf = ax.plot_surface(
                     Y, X, Z, cmap=cmap, linewidth=0, antialiased=False
                 )
-                ax.set_zlim(np.nanmin(Z), 1.0)
+                if self._g[n]._component_type.name == "CONVERTER":
+                    ax.set_zlim(np.nanmin(Z), 1.0)
+                else:
+                    ax.set_zlim(np.nanmin(Z), np.nanmax(Z))
                 ax.zaxis.set_major_locator(LinearLocator(10))
                 ax.zaxis.set_major_formatter("{x:.02f}")
                 if inpdata:
@@ -1254,9 +1264,15 @@ class System:
                 fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1)
                 plt.ylabel("Output current (A)")
                 plt.xlabel("Input voltage (V)")
-            if "vo" in self._g[n]._params:
+            if self._g[n]._component_type.name == "CONVERTER":
                 plt.title(
                     "{} efficiency for Vo={}V".format(name, self._g[n]._params["vo"])
+                )
+            elif self._g[n]._component_type.name == "LINREG":
+                plt.title(
+                    "{} ground current for Vo={}V".format(
+                        name, self._g[n]._params["vo"]
+                    )
                 )
             else:
                 plt.title("{} voltage drop".format(name))

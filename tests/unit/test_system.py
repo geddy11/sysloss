@@ -401,6 +401,24 @@ def test_case16():
     assert (
         type(case16.plot_interp("Diode 2")) == matplotlib.figure.Figure
     ), "Case16 Diode 2D figure"
+    iqdata = {
+        "vi": [5.0],
+        "io": [0.0, 0.01, 0.02, 0.1],
+        "iq": [[1e-6, 1e-3, 2e-3, 3e-3]],
+    }
+    case16.add_comp("12V", comp=LinReg("LinReg 1", vo=5.0, iq=iqdata))
+    assert (
+        type(case16.plot_interp("LinReg 1")) == matplotlib.figure.Figure
+    ), "Case16 LinReg 1D figure"
+    iqdata = {
+        "vi": [2.5, 5.0],
+        "io": [0.0, 0.01, 0.02, 0.1],
+        "iq": [[0.12e-6, 0.51e-3, 1.52e-3, 2.3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
+    }
+    case16.add_comp("12V", comp=LinReg("LinReg 2", vo=5.0, iq=iqdata))
+    assert (
+        type(case16.plot_interp("LinReg 2", plot3d=True)) == matplotlib.figure.Figure
+    ), "Case16 LinReg 2D figure"
 
 
 cap = 0.15
