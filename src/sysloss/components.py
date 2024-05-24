@@ -219,7 +219,7 @@ class Source:
         ----------
         name : str
             Source name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -310,7 +310,7 @@ class PLoad:
         ----------
         name : str
             Load name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -396,7 +396,7 @@ class ILoad(PLoad):
         ----------
         name : str
             Load name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -459,7 +459,7 @@ class RLoad(PLoad):
         ----------
         name : str
             Load name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -528,7 +528,7 @@ class RLoss:
         ----------
         name : str
             Loss name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -640,7 +640,7 @@ class VLoss:
         ----------
         name : str
             Loss name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -774,7 +774,7 @@ class Converter:
         ----------
         name : str
             Converter name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -850,6 +850,8 @@ class Converter:
 class LinReg:
     """Linear voltage converter.
 
+    If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
+
     Parameters
     ----------
     name : str
@@ -858,12 +860,17 @@ class LinReg:
         Output voltage (V).
     vdrop : float
         Dropout voltage (V).
-    iq : float, optional
-        Quiescent (no-load) current (A)., by default 0.0
+    iq : float | dict, optional
+        Ground current (A)., by default 0.0
     limits : dict, optional
         Voltage and current limits., by default LIMITS_DEFAULT
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0
+
+    Raises
+    ------
+    ValueError
+        If vdrop > vo.
     """
 
     @property
@@ -894,10 +901,26 @@ class LinReg:
         if not (abs(vdrop) < abs(vo)):
             raise ValueError("Voltage drop must be < vo")
         self._params["vdrop"] = abs(vdrop)
-        self._params["iq"] = abs(iq)
+        if isinstance(iq, dict):
+            if not np.all(np.diff(iq["io"]) > 0):
+                raise ValueError("iq values must be monotonic increasing")
+            if np.min(iq["iq"]) < 0.0:
+                raise ValueError("iq values must be >= 0.0")
+            if len(iq["vi"]) == 1:
+                self._ipr = _Interp1d(iq["io"], iq["iq"][0])
+            else:
+                cur = []
+                volt = []
+                for v in iq["vi"]:
+                    cur += iq["io"]
+                    volt += len(iq["io"]) * [v]
+                    iqi = np.asarray(iq["iq"]).reshape(1, -1)[0].tolist()
+                self._ipr = _Interp2d(cur, volt, iqi)
+        else:
+            self._ipr = _Interp0d(abs(iq))
+        self._params["iq"] = iq
         self._params["iis"] = abs(iis)
         self._limits = limits
-        self._ipr = None
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -907,7 +930,7 @@ class LinReg:
         ----------
         name : str
             LinReg name
-        fname : str, optional
+        fname : str
             File name.
         """
         with open(fname, "r") as f:
@@ -921,7 +944,7 @@ class LinReg:
         return cls(name, vo=v, vdrop=vd, iq=iq, limits=lim, iis=iis)
 
     def _get_inp_current(self, phase, phase_conf=[]):
-        i = self._params["iq"]
+        i = self._ipr._interp(0.0, 0.0)
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -940,10 +963,7 @@ class LinReg:
         """Calculate component input current from vi, vo and io"""
         if abs(vi) == 0.0:
             return 0.0
-        if io == 0.0:
-            i = self._params["iq"]
-        else:
-            i = io
+        i = io + self._ipr._interp(abs(io), abs(vi))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -966,10 +986,10 @@ class LinReg:
         v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
         if vi == 0.0 or v == 0.0:
             loss = 0.0
-        elif io > 0.0:
-            loss = (abs(vi) - abs(v)) * io
         else:
-            loss = abs(vi) * self._params["iq"]
+            loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+        if abs(io) > 0.0:
+            loss += (abs(vi) - abs(v)) * io
         pwr = abs(vi * ii)
         if not phase_conf:
             pass

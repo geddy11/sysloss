@@ -52,7 +52,7 @@ def test_case1():
     assert df.shape[1] == 13, "Case1 solution column count"
     assert np.allclose(
         df[df["Component"] == "System total"]["Efficiency (%)"][rows - 1],
-        79.9011,
+        79.4542,
         rtol=1e-6,
     ), "Case1 efficiency"
     assert (
@@ -127,10 +127,46 @@ def test_case4():
 
 def test_case5():
     """LinReg with zero input voltage"""
-    case5 = System("Case4 system", Source("0V system", vo=0.0))
+    case5 = System("Case5 system", Source("0V system", vo=0.0))
     case5.add_comp("0V system", comp=LinReg("LDO", vo=-3.3))
     df = case5.solve()
     assert len(df) == 3, "Case5 solution row count"
+
+
+def test_case5b():
+    """LinReg with interpolation parameter"""
+    case5b = System("Case5b system", Source("5V system", vo=5.0))
+    iqdata = {"vi": [5.0], "io": [0.1, 0.4, 0.6, 0.5], "iq": [[0.3, 0.4, 0.67, 0.89]]}
+    with pytest.raises(ValueError):
+        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+    iqdata = {
+        "vi": [5.0],
+        "io": [0.0, 0.4, 0.6, 0.8],
+        "iq": [[-0.3, -0.4, -0.67, -0.89]],
+    }
+    with pytest.raises(ValueError):
+        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+    iqdata = {"vi": [5.0], "io": [0.0, 0.1, 0.2, 0.3], "iq": [[1e-6, 1e-3, 2e-3, 3e-3]]}
+    case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+    df = case5b.solve()
+    rows = df.shape[0]
+    assert np.allclose(
+        df[df["Component"] == "System total"]["Iout (A)"][rows - 1],
+        1e-6,
+        rtol=1e-6,
+    ), "Case5b current"
+    iqdata = {
+        "vi": [3.3, 5.0],
+        "io": [0.0, 0.1, 0.2, 0.3],
+        "iq": [[1e-6, 1e-3, 2e-3, 3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
+    }
+    case5b.change_comp("LDO 3.3", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+    df = case5b.solve()
+    assert np.allclose(
+        df[df["Component"] == "System total"]["Iout (A)"][rows - 1],
+        1e-6,
+        rtol=1e-6,
+    ), "Case5b current"
 
 
 def test_case6():

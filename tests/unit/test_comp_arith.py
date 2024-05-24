@@ -411,9 +411,9 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, active_phases):
         if ict[0] == 0.0 or vo == 0.0:
             ii = 0.0
         elif active_phases == []:
-            ii = ict[2] if ict[2] > 0.0 else iq
+            ii = ict[2] + iq
         elif ict[3] in active_phases:
-            ii = ict[2] if ict[2] > 0.0 else iq
+            ii = ict[2] + iq
         elif ict[3] not in active_phases:
             ii = iis
         assert close(
@@ -438,7 +438,7 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, active_phases):
         v = min(
             abs(linreg._params["vo"]), max(abs(plt[0]) - linreg._params["vdrop"], 0.0)
         )
-        eloss = abs(iq * plt[0]) if plt[3] == 0.0 else (abs(plt[0]) - abs(v)) * plt[3]
+        eloss = abs(iq * plt[0]) + (abs(plt[0]) - abs(v)) * plt[3]
         if active_phases != []:
             if plt[4] not in active_phases:
                 eloss = abs(iis * plt[0])

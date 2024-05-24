@@ -35,17 +35,17 @@ def test_case1():
     rows = df.shape[0]
     assert np.allclose(
         df[df["Component"] == "System average"]["Power (W)"][rows - 1],
-        1.826334,
+        1.829633,
         rtol=1e-6,
     ), "Case1 power"
     assert np.allclose(
         df[df["Component"] == "System average"]["Loss (W)"][rows - 1],
-        0.814912,
+        0.818211,
         rtol=1e-6,
     ), "Case1 loss"
     assert np.allclose(
         df[df["Component"] == "System average"]["Efficiency (%)"][rows - 1],
-        54.846542,
+        54.747386,
         rtol=1e-6,
     ), "Case1 efficiency"
     assert (
