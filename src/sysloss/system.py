@@ -900,7 +900,10 @@ class System:
             elif self._g[n]._component_type == _ComponentTypes.LINREG:
                 _vo = self._g[n]._params["vo"]
                 _vdrop = self._g[n]._params["vdrop"]
-                _iq = self._g[n]._params["iq"]
+                if isinstance(self._g[n]._ipr, _Interp0d):
+                    _iq = self._g[n]._params["iq"]
+                else:
+                    _iq = "interp"
                 _iis = self._g[n]._params["iis"]
             elif self._g[n]._component_type == _ComponentTypes.SLOSS:
                 if "rs" in self._g[n]._params:

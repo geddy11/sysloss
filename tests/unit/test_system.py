@@ -167,6 +167,8 @@ def test_case5b():
         1e-6,
         rtol=1e-6,
     ), "Case5b current"
+    dfp = case5b.params()
+    assert len(dfp) == 2, "Case5b parameters row count"
 
 
 def test_case6():
