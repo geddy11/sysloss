@@ -261,6 +261,13 @@ class Source:
         """Check limits"""
         return _get_warns(self._limits, {"ii": ii, "io": io})
 
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["vo"] = self._params["vo"]
+        ret["rs"] = self._params["rs"]
+        return ret
+
 
 class PLoad:
     """Power load.
@@ -357,6 +364,13 @@ class PLoad:
                 return ""
         return _get_warns(self._limits, {"vi": vi, "ii": ii})
 
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["pwr"] = self._params["pwr"]
+        ret["pwrs"] = self._params["pwrs"]
+        return ret
+
 
 class ILoad(PLoad):
     """Current load.
@@ -422,6 +436,13 @@ class ILoad(PLoad):
 
         return abs(i)
 
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["ii"] = self._params["ii"]
+        ret["iis"] = self._params["iis"]
+        return ret
+
 
 class RLoad(PLoad):
     """Resistive load.
@@ -478,6 +499,12 @@ class RLoad(PLoad):
         else:
             r = phase_conf[phase]
         return abs(vi) / r
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["rs"] = self._params["rs"]
+        return ret
 
 
 class RLoss:
@@ -575,6 +602,12 @@ class RLoss:
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
         return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["rs"] = self._params["rs"]
+        return ret
 
 
 class VLoss:
@@ -701,6 +734,15 @@ class VLoss:
             "Input voltage (V)",
             "{} voltage drop".format(self._params["name"]),
         ]
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        if isinstance(self._ipr, _Interp0d):
+            ret["vdrop"] = abs(self._params["vdrop"])
+        else:
+            ret["vdrop"] = "interp"
+        return ret
 
 
 class Converter:
@@ -875,6 +917,18 @@ class Converter:
             "Input voltage (V)",
             "{} efficiency for Vo={}V".format(self._params["name"], self._params["vo"]),
         ]
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["vo"] = self._params["vo"]
+        ret["iq"] = self._params["iq"]
+        if isinstance(self._ipr, _Interp0d):
+            ret["eff"] = abs(self._params["eff"])
+        else:
+            ret["eff"] = "interp"
+        ret["iis"] = self._params["iis"]
+        return ret
 
 
 class LinReg:
@@ -1052,3 +1106,15 @@ class LinReg:
                 self._params["name"], self._params["vo"]
             ),
         ]
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["vo"] = self._params["vo"]
+        ret["vdrop"] = self._params["vdrop"]
+        if isinstance(self._ipr, _Interp0d):
+            ret["iq"] = abs(self._params["iq"])
+        else:
+            ret["iq"] = "interp"
+        ret["iis"] = self._params["iis"]
+        return ret

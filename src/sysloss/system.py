@@ -868,6 +868,7 @@ class System:
         lii, lio, lvi, lvo, pwrs = [], [], [], [], []
         domain, dname = [], "none"
         src_cnt = 0
+
         for n in self._topo_nodes:
             names += [self._g[n]._params["name"]]
             typ += [self._g[n]._component_type.name]
@@ -875,53 +876,27 @@ class System:
                 dname = self._g[n]._params["name"]
                 src_cnt += 1
             domain += [dname]
-            _vo, _vdrop, _iq, _rs, _eff, _ii, _pwr = "", "", "", "", "", "", ""
-            _iis, _pwrs = "", ""
-            if self._g[n]._component_type == _ComponentTypes.SOURCE:
-                _vo = self._g[n]._params["vo"]
-                _rs = self._g[n]._params["rs"]
-            elif self._g[n]._component_type == _ComponentTypes.LOAD:
-                if "pwr" in self._g[n]._params:
-                    _pwr = self._g[n]._params["pwr"]
-                    _pwrs = self._g[n]._params["pwrs"]
-                elif "rs" in self._g[n]._params:
-                    _rs = self._g[n]._params["rs"]
-                else:
-                    _ii = self._g[n]._params["ii"]
-                    _iis = self._g[n]._params["iis"]
-            elif self._g[n]._component_type == _ComponentTypes.CONVERTER:
-                _vo = self._g[n]._params["vo"]
-                _iq = self._g[n]._params["iq"]
-                if isinstance(self._g[n]._ipr, _Interp0d):
-                    _eff = self._g[n]._params["eff"]
-                else:
-                    _eff = "interp"
-                _iis = self._g[n]._params["iis"]
-            elif self._g[n]._component_type == _ComponentTypes.LINREG:
-                _vo = self._g[n]._params["vo"]
-                _vdrop = self._g[n]._params["vdrop"]
-                if isinstance(self._g[n]._ipr, _Interp0d):
-                    _iq = self._g[n]._params["iq"]
-                else:
-                    _iq = "interp"
-                _iis = self._g[n]._params["iis"]
-            elif self._g[n]._component_type == _ComponentTypes.SLOSS:
-                if "rs" in self._g[n]._params:
-                    _rs = self._g[n]._params["rs"]
-                else:
-                    if isinstance(self._g[n]._ipr, _Interp0d):
-                        _vdrop = self._g[n]._params["vdrop"]
-                    else:
-                        _vdrop = "interp"
-            vo += [_vo]
-            vdrop += [_vdrop]
-            iq += [_iq]
-            rs += [_rs]
-            eff += [_eff]
-            ii += [_ii]
-            pwr += [_pwr]
-            iis += [_iis]
-            pwrs += [_pwrs]
+            pdict = {
+                "vo": "",
+                "vdrop": "",
+                "iq": "",
+                "rs": "",
+                "eff": "",
+                "ii": "",
+                "pwr": "",
+                "iis": "",
+                "pwrs": "",
+            }
+            cparams = self._g[n]._get_params(pdict)
+            vo += [cparams["vo"]]
+            vdrop += [cparams["vdrop"]]
+            iq += [cparams["iq"]]
+            rs += [cparams["rs"]]
+            eff += [cparams["eff"]]
+            ii += [cparams["ii"]]
+            pwr += [cparams["pwr"]]
+            iis += [cparams["iis"]]
+            pwrs += [cparams["pwrs"]]
             parent += [self._get_parent_name(n)]
             if limits:
                 lii += [_get_opt(self._g[n]._limits, "ii", LIMITS_DEFAULT["ii"])]
