@@ -688,6 +688,20 @@ class VLoss:
         """Check limits"""
         return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
 
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Voltage drop (V)",
+                "{} voltage drop".format(self._params["name"]),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} voltage drop".format(self._params["name"]),
+        ]
+
 
 class Converter:
     """Voltage converter.
@@ -845,6 +859,22 @@ class Converter:
             if phase not in phase_conf:
                 return ""
         return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Efficiency",
+                "{} efficiency for Vo={}V".format(
+                    self._params["name"], self._params["vo"]
+                ),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} efficiency for Vo={}V".format(self._params["name"], self._params["vo"]),
+        ]
 
 
 class LinReg:
@@ -1004,3 +1034,21 @@ class LinReg:
             if phase not in phase_conf:
                 return ""
         return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Ground current (A)",
+                "{} ground current for Vo={}V".format(
+                    self._params["name"], self._params["vo"]
+                ),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} ground current for Vo={}V".format(
+                self._params["name"], self._params["vo"]
+            ),
+        ]

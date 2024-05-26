@@ -1187,6 +1187,7 @@ class System:
             raise ValueError("Component name is not valid!")
         n = self._g.attrs["nodes"][name]
         if isinstance(self._g[n]._ipr, _Interp1d):
+            annot = self._g[n]._get_annot()
             fig = plt.figure()
             xmin = max(self._g[n]._ipr._x[0] - 0.15 * max(self._g[n]._ipr._x), 0.0)
             xmax = 1.15 * max(self._g[n]._ipr._x)
@@ -1198,26 +1199,14 @@ class System:
                     self._g[n]._ipr._x, self._g[n]._ipr._fx, ".r", label="input data"
                 )
                 plt.legend(loc="lower right")
-            plt.xlabel("Output current (A)")
-            if self._g[n]._component_type.name == "CONVERTER":
-                plt.ylabel("Efficiency")
-                plt.title(
-                    "{} efficiency for Vo={}V".format(name, self._g[n]._params["vo"])
-                )
-            elif self._g[n]._component_type.name == "LINREG":
-                plt.ylabel("Ground current (A)")
-                plt.title(
-                    "{} ground current for Vo={}V".format(
-                        name, self._g[n]._params["vo"]
-                    )
-                )
-            else:
-                plt.ylabel("Voltage drop (V)")
-                plt.title("{} voltage drop".format(name))
+            plt.xlabel(annot[0])
+            plt.ylabel(annot[1])
+            plt.title(annot[2])
             plt.rc("axes", axisbelow=True)
             plt.grid()
             return fig
         elif isinstance(self._g[n]._ipr, _Interp2d):
+            annot = self._g[n]._get_annot()
             xmin = max(min(self._g[n]._ipr._x) - 0.15 * max(self._g[n]._ipr._x), 0.0)
             xmax = 1.15 * max(self._g[n]._ipr._x)
             X = np.linspace(xmin, xmax, num=100)
@@ -1242,8 +1231,8 @@ class System:
                     )
                     plt.legend(loc="upper left")
                 plt.colorbar()
-                plt.xlabel("Output current (A)")
-                plt.ylabel("Input voltage (V)")
+                plt.xlabel(annot[0])
+                plt.ylabel(annot[1])
             else:
                 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
                 surf = ax.plot_surface(
@@ -1265,20 +1254,10 @@ class System:
                     )
                     plt.legend(loc="upper left")
                 fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1)
-                plt.ylabel("Output current (A)")
-                plt.xlabel("Input voltage (V)")
-            if self._g[n]._component_type.name == "CONVERTER":
-                plt.title(
-                    "{} efficiency for Vo={}V".format(name, self._g[n]._params["vo"])
-                )
-            elif self._g[n]._component_type.name == "LINREG":
-                plt.title(
-                    "{} ground current for Vo={}V".format(
-                        name, self._g[n]._params["vo"]
-                    )
-                )
-            else:
-                plt.title("{} voltage drop".format(name))
+                # labels swapped
+                plt.xlabel(annot[1])
+                plt.ylabel(annot[0])
+            plt.title(annot[2])
             return fig
         else:
             print("Component does not have interpolation data")
