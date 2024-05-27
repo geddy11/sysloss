@@ -2,6 +2,39 @@
 
 
 
+## v1.2.0 (2024-05-27)
+
+### Ci
+
+* ci: fix maintainer in conda receipe ([`1d27b0c`](https://github.com/geddy11/sysloss/commit/1d27b0c9c4f4411cf71c6efd29ffcecb38139e7c))
+
+### Documentation
+
+* docs: correct toml interpolation data format in &#34;Component parameter files&#34; page ([`9275463`](https://github.com/geddy11/sysloss/commit/92754635952bcecb1da80cc7739135b7aad43d64))
+
+* docs: remove output from import packages cell ([`0b56c35`](https://github.com/geddy11/sysloss/commit/0b56c35ae4d83552c9374302c33edaf3ea54f533))
+
+### Feature
+
+* feat: add power limits to all components (pi, po, pl) ([`ce36738`](https://github.com/geddy11/sysloss/commit/ce367382eda204f0a8961d65e2e13a173d34c83d))
+
+* feat(components): add interpolation option to LinReg ground current parameter ([`2393767`](https://github.com/geddy11/sysloss/commit/23937677641ce6d99bbdb065b43a50a88a0a7a62))
+
+### Fix
+
+* fix(system): add correct title to LinReg interpolation data plots ([`8ade81d`](https://github.com/geddy11/sysloss/commit/8ade81ddf9ef29387db89157b6da3feb850c5514))
+
+### Refactor
+
+* refactor: system .params() method now gets component parameters from ._get_params() method ([`320fc09`](https://github.com/geddy11/sysloss/commit/320fc09d3ac5cd8a86f207ada78ddb73269dfa43))
+
+* refactor: system method .plot_interp() gets figure annotations from component method ._get_annot() ([`bb2f017`](https://github.com/geddy11/sysloss/commit/bb2f0173ed8c8469a0bf166435c4f96bfd57fc64))
+
+### Unknown
+
+* Merge branch &#39;main&#39; of https://github.com/geddy11/sysloss ([`ebce939`](https://github.com/geddy11/sysloss/commit/ebce93933ba42a73949a877dff8415091ce5490a))
+
+
 ## v1.1.1 (2024-05-22)
 
 ### Build
