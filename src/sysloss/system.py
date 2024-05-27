@@ -865,7 +865,7 @@ class System:
         self._rel_update()
         names, typ, parent, vo, vdrop = [], [], [], [], []
         iq, rs, eff, ii, pwr, iis = [], [], [], [], [], []
-        lii, lio, lvi, lvo, pwrs = [], [], [], [], []
+        lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         domain, dname = [], "none"
         src_cnt = 0
 
@@ -903,6 +903,9 @@ class System:
                 lio += [_get_opt(self._g[n]._limits, "io", LIMITS_DEFAULT["io"])]
                 lvi += [_get_opt(self._g[n]._limits, "vi", LIMITS_DEFAULT["vi"])]
                 lvo += [_get_opt(self._g[n]._limits, "vo", LIMITS_DEFAULT["vo"])]
+                lpi += [_get_opt(self._g[n]._limits, "pi", LIMITS_DEFAULT["pi"])]
+                lpo += [_get_opt(self._g[n]._limits, "po", LIMITS_DEFAULT["po"])]
+                lpl += [_get_opt(self._g[n]._limits, "pl", LIMITS_DEFAULT["pl"])]
         # report
         res = {}
         res["Component"] = names
@@ -920,10 +923,14 @@ class System:
         res["pwr (W)"] = pwr
         res["pwrs (W)"] = pwrs
         if limits:
-            res["vi limits (V)"] = lvi
-            res["vo limits (V)"] = lvo
-            res["ii limits (A)"] = lii
-            res["io limits (A)"] = lio
+            res["vi limit (V)"] = lvi
+            res["vo limit (V)"] = lvo
+            res["ii limit (A)"] = lii
+            res["io limit (A)"] = lio
+            res["pi limit (A)"] = lpi
+            res["po limit (A)"] = lpo
+            res["pl limit (A)"] = lpl
+
         return pd.DataFrame(res)
 
     def set_sys_phases(self, phases: dict):

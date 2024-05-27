@@ -52,6 +52,9 @@ LIMITS_DEFAULT = {
     "vo": [0.0, MAX_DEFAULT],
     "ii": [0.0, MAX_DEFAULT],
     "io": [0.0, MAX_DEFAULT],
+    "pi": [0.0, MAX_DEFAULT],
+    "po": [0.0, MAX_DEFAULT],
+    "pl": [0.0, MAX_DEFAULT],
 }
 
 
@@ -181,7 +184,7 @@ class Source:
     rs : float, optional
         Source resistance., by default 0.0
     limits : dict, optional
-        Voltage and current limits., by default LIMITS_DEFAULT
+        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: io, po, pl.
     """
 
     @property
@@ -259,7 +262,9 @@ class Source:
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
-        return _get_warns(self._limits, {"ii": ii, "io": io})
+        return _get_warns(
+            self._limits, {"io": io, "po": vo * io, "pl": self._params["rs"] * io * io}
+        )
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
@@ -279,7 +284,7 @@ class PLoad:
     pwr : float
         Load power (W).
     limits : dict, optional
-         Voltage and current limits., by default LIMITS_DEFAULT
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii
     pwrs : float, optional
         Load sleep power (W), by default PWRS_DEFAULT
     """
@@ -382,7 +387,7 @@ class ILoad(PLoad):
     ii : float
         Load current (A).
     limits : dict, optional
-         Voltage and current limits., by default LIMITS_DEFAULT
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, pi
     iis : float, optional
         Load sleep current (A), by default PWRS_DEFAULT
     """
@@ -436,6 +441,13 @@ class ILoad(PLoad):
 
         return abs(i)
 
+    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+        """Check limits"""
+        if phase_conf and phase != "":
+            if phase not in phase_conf:
+                return ""
+        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii})
+
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
@@ -454,7 +466,7 @@ class RLoad(PLoad):
     rs : float
         Load resistance (ohm).
     limits : dict, optional
-         Voltage and current limits., by default LIMITS_DEFAULT
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi
     """
 
     def __init__(
@@ -500,6 +512,13 @@ class RLoad(PLoad):
             r = phase_conf[phase]
         return abs(vi) / r
 
+    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+        """Check limits"""
+        if phase_conf and phase != "":
+            if phase not in phase_conf:
+                return ""
+        return _get_warns(self._limits, {"vi": vi, "ii": ii, "pi": vi * ii})
+
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
@@ -519,7 +538,7 @@ class RLoss:
     rs : float
         Loss resistance (ohm).
     limits : dict, optional
-         Voltage and current limits., by default LIMITS_DEFAULT
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
     """
 
     @property
@@ -601,7 +620,18 @@ class RLoss:
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
-        return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+        return _get_warns(
+            self._limits,
+            {
+                "vi": vi,
+                "vo": vo,
+                "ii": ii,
+                "io": io,
+                "pi": vi * ii,
+                "po": vo * io,
+                "pl": vi * ii - vo * io,
+            },
+        )
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
@@ -622,7 +652,7 @@ class VLoss:
     vdrop : float | dict
         Voltage drop (V), a constant value (float) or interpolation data (dict).
     limits : dict, optional
-         Voltage and current limits., by default LIMITS_DEFAULT
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
     """
 
     @property
@@ -719,7 +749,18 @@ class VLoss:
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
-        return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+        return _get_warns(
+            self._limits,
+            {
+                "vi": vi,
+                "vo": vo,
+                "ii": ii,
+                "io": io,
+                "pi": vi * ii,
+                "po": vo * io,
+                "pl": vi * ii - vo * io,
+            },
+        )
 
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
@@ -759,7 +800,7 @@ class Converter:
     iq : float, optional
         Quiescent (no-load) current (A)., by default 0.0
     limits : dict, optional
-        Voltage and current limits., by default LIMITS_DEFAULT
+        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0
 
@@ -900,7 +941,11 @@ class Converter:
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+        pi, pl, _ = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        return _get_warns(
+            self._limits,
+            {"vi": vi, "vo": vo, "ii": ii, "io": io, "pi": pi, "po": pi - pl, "pl": pl},
+        )
 
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
@@ -947,7 +992,7 @@ class LinReg:
     iq : float | dict, optional
         Ground current (A)., by default 0.0
     limits : dict, optional
-        Voltage and current limits., by default LIMITS_DEFAULT
+        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0
 
@@ -1087,7 +1132,11 @@ class LinReg:
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        return _get_warns(self._limits, {"vi": vi, "vo": vo, "ii": ii, "io": io})
+        pi, pl, _ = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        return _get_warns(
+            self._limits,
+            {"vi": vi, "vo": vo, "ii": ii, "io": io, "pi": pi, "po": pi - pl, "pl": pl},
+        )
 
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""

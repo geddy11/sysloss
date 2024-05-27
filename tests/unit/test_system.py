@@ -237,7 +237,7 @@ def test_case12():
             "6V",
             vo=6.0,
             limits={
-                "ii": [0.0, 0.101],
+                "io": [0.0, 0.101],
             },
         ),
     )
@@ -251,7 +251,7 @@ def test_case12():
 def test_case13():
     """Multi-source"""
     case13 = System("Case13 system", Source("3.3V", vo=3.3))
-    case13.add_source(Source("12V", vo=12, limits={"ii": [0, 1e-3]}))
+    case13.add_source(Source("12V", vo=12, limits={"io": [0, 1e-3]}))
     case13.add_comp("3.3V", comp=PLoad("MCU", pwr=0.2))
     case13.add_comp("12V", comp=PLoad("Test", pwr=1.5))
     with pytest.raises(ValueError):
