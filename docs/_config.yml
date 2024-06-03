@@ -50,3 +50,4 @@ sphinx:
     #html_theme: "sphinx_rtd_theme"
     add_module_names: False
     bibtex_bibfiles: ['references.bib']
+    mathjax_path: https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

@@ -13,4 +13,5 @@ chapters:
   - file: nb/Sensor daisy chain
   - file: nb/PCIe FPGA
   - file: nb/Datacenter rack
+  - file: nb/ROV battery pack
 - file: refs
