@@ -291,7 +291,7 @@ def test_case13():
         dff[dff["Component"] == "Subsystem 3.3V"]["Warnings"][5] == ""
     ), "Case 13 Subsystem 3.3V warnings"
     dfp = case13b.params()
-    assert dfp.shape[1] == 13, "Case13 parameter column count"
+    assert dfp.shape[1] == 14, "Case13 parameter column count"
     phases = {"sleep": 3600, "active": 127}
     case13b.set_sys_phases(phases)
     dfp = case13b.phases()
@@ -310,7 +310,7 @@ def test_case14():
 def test_case15():
     """Load phases"""
     case15 = System("Case15 system", Source("5V", vo=5.0))
-    case15.add_comp("5V", comp=Converter("Buck 3.3", vo=3.3, eff=0.88))
+    case15.add_comp("5V", comp=Converter("Buck 3.3", vo=3.3, eff=0.88, rt=100.0))
     case15.set_comp_phases("Buck 3.3", phase_conf=["active"])
     case15.add_comp("5V", comp=LinReg("LDO 1.8", vo=1.8))
     case15.set_comp_phases("LDO 1.8", phase_conf=["sleep"])
@@ -357,11 +357,11 @@ def test_case15():
     assert len(df) == 2 * expl + 1, "Case15 solution row count (all phases)"
     df = case15.solve(tags={"Tag1": "one"})
     assert df.shape[0] == 2 * expl + 1, "Case15 tagged solution row count (all phases)"
-    assert df.shape[1] == 13, "Case15 tagged solution column count (all phases)"
+    assert df.shape[1] == 14, "Case15 tagged solution column count (all phases)"
     df = case15.solve(tags={"Tag1": "one"}, energy=True)
     assert df.shape[0] == 2 * expl + 1, "Case15 tagged solution row count (all phases)"
     assert (
-        df.shape[1] == 14
+        df.shape[1] == 15
     ), "Case15 tagged solution column count with energy (all phases)"
 
 

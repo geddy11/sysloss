@@ -45,6 +45,7 @@ MAX_DEFAULT = 1.0e6
 IQ_DEFAULT = 0.0
 IIS_DEFAULT = 0.0
 RS_DEFAULT = 0.0
+RT_DEFAULT = 0.0
 VDROP_DEFAULT = 0.0
 PWRS_DEFAULT = 0.0
 LIMITS_DEFAULT = {
@@ -55,6 +56,7 @@ LIMITS_DEFAULT = {
     "pi": [0.0, MAX_DEFAULT],
     "po": [0.0, MAX_DEFAULT],
     "pl": [0.0, MAX_DEFAULT],
+    "tr": [0.0, MAX_DEFAULT],
 }
 
 
@@ -211,6 +213,7 @@ class Source:
         self._params["name"] = name
         self._params["vo"] = vo
         self._params["rs"] = abs(rs)
+        self._params["rt"] = 0.0
         self._limits = limits
         self._ipr = None
 
@@ -254,11 +257,11 @@ class Source:
     def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
         """Calculate power and loss in component"""
         if self._params["vo"] == 0.0:
-            return 0.0, 0.0, 100.0
+            return 0.0, 0.0, 100.0, 0.0
         ipwr = abs(self._params["vo"] * io)
         loss = self._params["rs"] * io * io
         opwr = ipwr - loss
-        return ipwr, loss, _get_eff(ipwr, opwr)
+        return ipwr, loss, _get_eff(ipwr, opwr), 0.0
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
@@ -284,9 +287,11 @@ class PLoad:
     pwr : float
         Load power (W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, tr
     pwrs : float, optional
         Load sleep power (W), by default PWRS_DEFAULT
+    rt : float, optional
+        Thermal resistance (°C/W).
     """
 
     @property
@@ -306,11 +311,13 @@ class PLoad:
         pwr: float,
         limits: dict = LIMITS_DEFAULT,
         pwrs: float = PWRS_DEFAULT,
+        rt: float = RT_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
         self._params["pwr"] = abs(pwr)
         self._params["pwrs"] = abs(pwrs)
+        self._params["rt"] = abs(rt)
         self._limits = limits
         self._ipr = None
 
@@ -331,7 +338,8 @@ class PLoad:
         p = _get_mand(config["pload"], "pwr")
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         pwrs = _get_opt(config["pload"], "pwrs", PWRS_DEFAULT)
-        return cls(name, pwr=p, limits=lim, pwrs=pwrs)
+        rt = _get_opt(config["pload"], "rt", RT_DEFAULT)
+        return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
         return 0.0
@@ -359,21 +367,23 @@ class PLoad:
     def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
         """Calculate power and loss in component"""
         if vi == 0.0:
-            return 0.0, 0.0, 100.0
-        return abs(vi * ii), 0.0, 100.0
+            return 0.0, 0.0, 100.0, 0.0
+        return abs(vi * ii), 0.0, 100.0, abs(vi * ii) * self._params["rt"]
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
-        return _get_warns(self._limits, {"vi": vi, "ii": ii})
+        tr = vi * ii * self._params["rt"]
+        return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr})
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
         ret["pwr"] = self._params["pwr"]
         ret["pwrs"] = self._params["pwrs"]
+        ret["rt"] = self._params["rt"]
         return ret
 
 
@@ -387,9 +397,11 @@ class ILoad(PLoad):
     ii : float
         Load current (A).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, pi
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, pi, tr
     iis : float, optional
         Load sleep current (A), by default PWRS_DEFAULT
+    rt : float, optional
+        Thermal resistance (°C/W).
     """
 
     def __init__(
@@ -399,12 +411,14 @@ class ILoad(PLoad):
         ii: float,
         limits: dict = LIMITS_DEFAULT,
         iis: float = IIS_DEFAULT,
+        rt: float = RT_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
         self._params["ii"] = abs(ii)
         self._limits = limits
         self._params["iis"] = abs(iis)
+        self._params["rt"] = abs(rt)
         self._ipr = None
 
     @classmethod
@@ -424,7 +438,8 @@ class ILoad(PLoad):
         i = _get_mand(config["iload"], "ii")
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["iload"], "iis", IIS_DEFAULT)
-        return cls(name, ii=i, limits=lim, iis=iis)
+        rt = _get_opt(config["iload"], "rt", RT_DEFAULT)
+        return cls(name, ii=i, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
         return self._params["ii"]
@@ -446,13 +461,15 @@ class ILoad(PLoad):
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
-        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii})
+        tr = vi * ii * self._params["rt"]
+        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr})
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
         ret["ii"] = self._params["ii"]
         ret["iis"] = self._params["iis"]
+        ret["rt"] = self._params["rt"]
         return ret
 
 
@@ -465,8 +482,10 @@ class RLoad(PLoad):
         Load name.
     rs : float
         Load resistance (ohm).
+    rt : float, optional
+        Thermal resistance (°C/W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr
     """
 
     def __init__(
@@ -474,6 +493,7 @@ class RLoad(PLoad):
         name: str,
         *,
         rs: float,
+        rt: float = RT_DEFAULT,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
@@ -481,6 +501,7 @@ class RLoad(PLoad):
         if abs(rs) == 0.0:
             raise ValueError("rs must be > 0!")
         self._params["rs"] = abs(rs)
+        self._params["rt"] = abs(rt)
         self._limits = limits
         self._ipr = None
 
@@ -500,7 +521,8 @@ class RLoad(PLoad):
 
         r = _get_mand(config["rload"], "rs")
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, rs=r, limits=lim)
+        rt = _get_opt(config["rload"], "rt", RT_DEFAULT)
+        return cls(name, rs=r, rt=rt, limits=lim)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
         r = self._params["rs"]
@@ -517,12 +539,14 @@ class RLoad(PLoad):
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
-        return _get_warns(self._limits, {"vi": vi, "ii": ii, "pi": vi * ii})
+        tr = vi * ii * self._params["rt"]
+        return _get_warns(self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr})
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
         ret["rs"] = self._params["rs"]
+        ret["rt"] = self._params["rt"]
         return ret
 
 
@@ -537,8 +561,10 @@ class RLoss:
         Loss name.
     rs : float
         Loss resistance (ohm).
+    rt : float, optional
+        Thermal resistance (°C/W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     """
 
     @property
@@ -558,11 +584,13 @@ class RLoss:
         name: str,
         *,
         rs: float,
+        rt: float = RT_DEFAULT,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
         self._params["rs"] = abs(rs)
+        self._params["rt"] = abs(rt)
         self._limits = limits
         self._ipr = None
 
@@ -581,8 +609,9 @@ class RLoss:
             config = toml.load(f)
 
         r = _get_mand(config["rloss"], "rs")
+        rt = _get_opt(config["rloss"], "rt", RT_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, rs=r, limits=lim)
+        return cls(name, rs=r, limits=lim, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
         return 0.0
@@ -613,13 +642,15 @@ class RLoss:
         """Calculate power and loss in component"""
         vout = vi - self._params["rs"] * io * np.sign(vi)
         if np.sign(vout) != np.sign(vi):
-            return 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0)
+        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), loss * self._params["rt"]
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
+        pl = abs(vi) * ii - abs(vo) * io
+        tr = pl * self._params["rt"]
         return _get_warns(
             self._limits,
             {
@@ -627,9 +658,10 @@ class RLoss:
                 "vo": vo,
                 "ii": ii,
                 "io": io,
-                "pi": vi * ii,
-                "po": vo * io,
-                "pl": vi * ii - vo * io,
+                "pi": abs(vi * ii),
+                "po": abs(vo * io),
+                "pl": pl,
+                "tr": tr,
             },
         )
 
@@ -637,6 +669,7 @@ class RLoss:
         """Return dict with component parameters"""
         ret = pdict
         ret["rs"] = self._params["rs"]
+        ret["rt"] = self._params["rt"]
         return ret
 
 
@@ -651,8 +684,10 @@ class VLoss:
         Loss name.
     vdrop : float | dict
         Voltage drop (V), a constant value (float) or interpolation data (dict).
+    rt : float, optional
+        Thermal resistance (°C/W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
+         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     """
 
     @property
@@ -672,10 +707,12 @@ class VLoss:
         name: str,
         *,
         vdrop: float | dict,
+        rt: float = RT_DEFAULT,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
+        self._params["rt"] = abs(rt)
         if isinstance(vdrop, dict):
             if not np.all(np.diff(vdrop["io"]) > 0):
                 raise ValueError("io values must be monotonic increasing")
@@ -710,8 +747,9 @@ class VLoss:
             config = toml.load(f)
 
         vd = _get_mand(config["vloss"], "vdrop")
+        rt = _get_opt(config["vloss"], "rt", RT_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, vdrop=vd, limits=lim)
+        return cls(name, vdrop=vd, rt=rt, limits=lim)
 
     def _get_inp_current(self, phase, phase_conf={}):
         return 0.0
@@ -742,13 +780,15 @@ class VLoss:
         """Calculate power and loss in component"""
         vout = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
         if np.sign(vout) != np.sign(vi):
-            return 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0)
+        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), loss * self._params["rt"]
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
         """Check limits"""
+        pl = abs(vi) * ii - abs(vo) * io
+        tr = pl * self._params["rt"]
         return _get_warns(
             self._limits,
             {
@@ -756,9 +796,10 @@ class VLoss:
                 "vo": vo,
                 "ii": ii,
                 "io": io,
-                "pi": vi * ii,
-                "po": vo * io,
-                "pl": vi * ii - vo * io,
+                "pi": abs(vi * ii),
+                "po": abs(vo * io),
+                "pl": pl,
+                "tr": tr,
             },
         )
 
@@ -779,6 +820,7 @@ class VLoss:
     def _get_params(self, pdict):
         """Return dict with component parameters"""
         ret = pdict
+        ret["rt"] = self._params["rt"]
         if isinstance(self._ipr, _Interp0d):
             ret["vdrop"] = abs(self._params["vdrop"])
         else:
@@ -800,9 +842,11 @@ class Converter:
     iq : float, optional
         Quiescent (no-load) current (A)., by default 0.0
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
+        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0
+    rt : float, optional
+        Thermal resistance (°C/W).
 
     Raises
     ------
@@ -831,6 +875,7 @@ class Converter:
         iq: float = IQ_DEFAULT,
         limits: dict = LIMITS_DEFAULT,
         iis: float = IIS_DEFAULT,
+        rt: float = RT_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
@@ -861,6 +906,7 @@ class Converter:
         self._params["eff"] = eff
         self._params["iq"] = abs(iq)
         self._params["iis"] = abs(iis)
+        self._params["rt"] = abs(rt)
         self._limits = limits
 
     @classmethod
@@ -882,7 +928,8 @@ class Converter:
         iq = _get_opt(config["converter"], "iq", IQ_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["converter"], "iis", IIS_DEFAULT)
-        return cls(name, vo=v, eff=e, iq=iq, limits=lim, iis=iis)
+        rt = _get_opt(config["converter"], "rt", RT_DEFAULT)
+        return cls(name, vo=v, eff=e, iq=iq, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
         i = self._params["iq"]
@@ -934,17 +981,26 @@ class Converter:
             if phase not in phase_conf:
                 loss = abs(self._params["iis"] * vi)
                 pwr = abs(self._params["iis"] * vi)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0)
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), loss * self._params["rt"]
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf=[]):
         """Check limits"""
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        pi, pl, _ = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        pi, pl, _, tr = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
         return _get_warns(
             self._limits,
-            {"vi": vi, "vo": vo, "ii": ii, "io": io, "pi": pi, "po": pi - pl, "pl": pl},
+            {
+                "vi": vi,
+                "vo": vo,
+                "ii": ii,
+                "io": io,
+                "pi": pi,
+                "po": pi - pl,
+                "pl": pl,
+                "tr": tr,
+            },
         )
 
     def _get_annot(self):
@@ -973,6 +1029,7 @@ class Converter:
         else:
             ret["eff"] = "interp"
         ret["iis"] = self._params["iis"]
+        ret["rt"] = self._params["rt"]
         return ret
 
 
@@ -992,9 +1049,11 @@ class LinReg:
     iq : float | dict, optional
         Ground current (A)., by default 0.0
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl
+        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0
+    rt : float, optional
+        Thermal resistance (°C/W).
 
     Raises
     ------
@@ -1023,6 +1082,7 @@ class LinReg:
         iq: float = IQ_DEFAULT,
         limits: dict = LIMITS_DEFAULT,
         iis: float = IIS_DEFAULT,
+        rt: float = RT_DEFAULT,
     ):
         self._params = {}
         self._params["name"] = name
@@ -1049,6 +1109,7 @@ class LinReg:
             self._ipr = _Interp0d(abs(iq))
         self._params["iq"] = iq
         self._params["iis"] = abs(iis)
+        self._params["rt"] = abs(rt)
         self._limits = limits
 
     @classmethod
@@ -1070,7 +1131,8 @@ class LinReg:
         iq = _get_opt(config["linreg"], "iq", IQ_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["linreg"], "iis", IIS_DEFAULT)
-        return cls(name, vo=v, vdrop=vd, iq=iq, limits=lim, iis=iis)
+        rt = _get_opt(config["linreg"], "rt", RT_DEFAULT)
+        return cls(name, vo=v, vdrop=vd, iq=iq, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
         i = self._ipr._interp(0.0, 0.0)
@@ -1125,17 +1187,26 @@ class LinReg:
         elif phase not in phase_conf:
             loss = abs(self._params["iis"] * vi)
             pwr = abs(self._params["iis"] * vi)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0)
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), loss * self._params["rt"]
 
     def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf=[]):
         """Check limits"""
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        pi, pl, _ = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        pi, pl, _, tr = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
         return _get_warns(
             self._limits,
-            {"vi": vi, "vo": vo, "ii": ii, "io": io, "pi": pi, "po": pi - pl, "pl": pl},
+            {
+                "vi": vi,
+                "vo": vo,
+                "ii": ii,
+                "io": io,
+                "pi": pi,
+                "po": pi - pl,
+                "pl": pl,
+                "tr": tr,
+            },
         )
 
     def _get_annot(self):
@@ -1166,4 +1237,5 @@ class LinReg:
         else:
             ret["iq"] = "interp"
         ret["iis"] = self._params["iis"]
+        ret["rt"] = self._params["rt"]
         return ret

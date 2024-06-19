@@ -675,10 +675,11 @@ class System:
                     "Steady-state not achieved after {} iterations".format(iters - 1)
                 )
             # calculate results for each node
-            names, parent, typ, pwr, loss = [], [], [], [], []
+            names, parent, typ, pwr, loss, trise = [], [], [], [], [], []
             eff, warn, vsi, iso, vso, isi = [], [], [], [], [], []
             domain, phases, ener, dname = [], [], [], "none"
             sources, dwarns = {}, {}
+            show_trise = False
             for n in self._topo_nodes:  # [vi, vo, ii, io]
                 phase_config = self._phase_lkup[n]
                 names += [self._g[n]._params["name"]]
@@ -703,9 +704,17 @@ class System:
                         io += i[c]
                     vi = v[p[0]]
                 parent += [self._get_parent_name(n)]
-                p, l, e = self._g[n]._solv_pwr_loss(vi, vo, ii, io, ph, phase_config)
+                p, l, e, tr = self._g[n]._solv_pwr_loss(
+                    vi, vo, ii, io, ph, phase_config
+                )
                 pwr += [p]
                 loss += [l]
+                if self._g[n]._component_type.name == "SOURCE":
+                    trise += [""]
+                else:
+                    trise += [tr]
+                    if tr > 0.0:
+                        show_trise = True
                 eff += [e]
                 typ += [self._g[n]._component_type.name]
                 ener += [self._calc_energy(ph, p)]
@@ -734,6 +743,7 @@ class System:
                 iso += [""]
                 pwr += [""]
                 loss += [""]
+                trise += [""]
                 eff += [""]
                 ener += [""]
                 if dwarns[list(sources.keys())[d]] > 0:
@@ -753,6 +763,7 @@ class System:
             iso += [""]
             pwr += [""]
             loss += [""]
+            trise += [""]
             eff += [""]
             ener += [""]
             if any(warn):
@@ -778,6 +789,8 @@ class System:
             res["Power (W)"] = pwr
             res["Loss (W)"] = loss
             res["Efficiency (%)"] = eff
+            if show_trise:
+                res["Temp. rise (°C)"] = trise
             if energy:
                 res["24h energy (Wh)"] = ener
             res["Warnings"] = warn
@@ -864,7 +877,7 @@ class System:
         """
         self._rel_update()
         names, typ, parent, vo, vdrop = [], [], [], [], []
-        iq, rs, eff, ii, pwr, iis = [], [], [], [], [], []
+        iq, rs, rt, eff, ii, pwr, iis, lrt = [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         domain, dname = [], "none"
         src_cnt = 0
@@ -881,6 +894,7 @@ class System:
                 "vdrop": "",
                 "iq": "",
                 "rs": "",
+                "rt": "",
                 "eff": "",
                 "ii": "",
                 "pwr": "",
@@ -892,6 +906,7 @@ class System:
             vdrop += [cparams["vdrop"]]
             iq += [cparams["iq"]]
             rs += [cparams["rs"]]
+            rt += [cparams["rt"]]
             eff += [cparams["eff"]]
             ii += [cparams["ii"]]
             pwr += [cparams["pwr"]]
@@ -906,6 +921,7 @@ class System:
                 lpi += [_get_opt(self._g[n]._limits, "pi", LIMITS_DEFAULT["pi"])]
                 lpo += [_get_opt(self._g[n]._limits, "po", LIMITS_DEFAULT["po"])]
                 lpl += [_get_opt(self._g[n]._limits, "pl", LIMITS_DEFAULT["pl"])]
+                lrt += [_get_opt(self._g[n]._limits, "tr", LIMITS_DEFAULT["tr"])]
         # report
         res = {}
         res["Component"] = names
@@ -916,6 +932,7 @@ class System:
         res["vo (V)"] = vo
         res["vdrop (V)"] = vdrop
         res["rs (Ohm)"] = rs
+        res["rt (°C/W)"] = rt
         res["eff (%)"] = eff
         res["iq (A)"] = iq
         res["ii (A)"] = ii
@@ -927,9 +944,10 @@ class System:
             res["vo limit (V)"] = lvo
             res["ii limit (A)"] = lii
             res["io limit (A)"] = lio
-            res["pi limit (A)"] = lpi
-            res["po limit (A)"] = lpo
-            res["pl limit (A)"] = lpl
+            res["pi limit (W)"] = lpi
+            res["po limit (W)"] = lpo
+            res["pl limit (W)"] = lpl
+            res["tr limit (°C)"] = lrt
 
         return pd.DataFrame(res)
 
