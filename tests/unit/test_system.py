@@ -455,5 +455,8 @@ def test_case17():
     case17.set_sys_phases(case17_phases)
     case17.set_comp_phases("MCU", phase_conf={"sleep": 0.05, "run": 0.13})
     cap = 0.15
-    bdf = case17.batt_life("LiPo", cutoff=2.9, pfunc=probe, dfunc=deplete)
-    assert bdf.shape[0] < 1000, "Case17 result columns with load phases"
+    bdf = case17.batt_life(
+        "LiPo", cutoff=2.9, pfunc=probe, dfunc=deplete, tags={"tag 1": 1}
+    )
+    assert bdf.shape[0] < 1000, "Case17 result rows with load phases"
+    assert bdf.shape[1] == 5, "Case17 result columns with load phases"

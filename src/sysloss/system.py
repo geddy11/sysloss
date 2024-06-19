@@ -1252,6 +1252,7 @@ class System:
         cutoff: float,
         pfunc: Callable[[], tuple[float, float, float]],
         dfunc: Callable[[float, float], tuple[float, float, float]],
+        tags: dict = {},
     ) -> pd.DataFrame:
         """Estimate battery life.
 
@@ -1275,6 +1276,8 @@ class System:
         dfunc : Callable[[float, float], tuple[float, float, float]]
             Battery deplete callback function. Function arguments are time (s) and
             current (A). Must return tuple with same format as pfunc.
+        tags: dict, optional
+            Tag-value pairs that will be added to the results table
 
         Returns
         -------
@@ -1346,4 +1349,7 @@ class System:
         res["Capacity (Ah)"] = cap
         res["Voltage (V)"] = volt
         res["Resistance (Ohm)"] = rs
+        if tags != {}:
+            for key in tags.keys():
+                res[key] = [tags[key]] * len(t)
         return pd.DataFrame(res)
