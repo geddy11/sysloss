@@ -8,7 +8,15 @@ readme = "README.md"
 homepage = "https://github.com/geddy11/sysloss"
 repository = "https://github.com/geddy11/sysloss"
 documentation = "https://sysloss.readthedocs.io/en/latest/Getting%20started.html#"
-keywords = ["system", "power" , "loss", "efficiency", "energy", "component"]
+keywords = ["system", "power" , "loss", "efficiency", "energy", "component", "battery"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
