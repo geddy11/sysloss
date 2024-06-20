@@ -1,6 +1,26 @@
 # CHANGELOG
 
+## v1.3.0 (2024-06-19)
 
+### Build
+
+* build: add PyPI classifiers ([`f8a0a9f`](https://github.com/geddy11/sysloss/commit/f8a0a9f26fc693f615a8218eb28939d516fac3c3))
+
+### Ci
+
+* ci: remove unused jobs in pipeline ([`4849845`](https://github.com/geddy11/sysloss/commit/48498455837e54bee43815c86cc31fd8a55f31de))
+
+### Documentation
+
+* docs: update sysLoss version in CITATION.cff ([`6fb8ad8`](https://github.com/geddy11/sysloss/commit/6fb8ad82a1943a4d8fe897b4244ac395e84d7476))
+
+* docs: add ROV battery pack tutorial ([`61afdba`](https://github.com/geddy11/sysloss/commit/61afdba5a2504ce609cc43737a80183a2251ca0f))
+
+### Feature
+
+* feat: add thermal resistance parameter and temperature rise calculation ([`b8481a2`](https://github.com/geddy11/sysloss/commit/b8481a263065387e7cf600cda000be78cb307e0b))
+
+* feat: add tags argument to .batt_life() ([`495eea5`](https://github.com/geddy11/sysloss/commit/495eea53bdd45af605080e59814dab2828c91f38))
 
 ## v1.2.0 (2024-05-27)
 
@@ -33,7 +53,6 @@
 ### Unknown
 
 * Merge branch &#39;main&#39; of https://github.com/geddy11/sysloss ([`ebce939`](https://github.com/geddy11/sysloss/commit/ebce93933ba42a73949a877dff8415091ce5490a))
-
 
 ## v1.1.1 (2024-05-22)
 
@@ -73,7 +92,6 @@
 
 * fix: print tree in .tree() method to make it show in terminal mode ([`d2b43e3`](https://github.com/geddy11/sysloss/commit/d2b43e31fded161c4122b1bb61ed1486b2ee4818))
 
-
 ## v1.1.0 (2024-05-08)
 
 ### Build
@@ -99,7 +117,6 @@
 * Merge pull request #5 from geddy11/battsim
 
 Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1f999f81febf4712e6bcfc8d2917e3f241749281))
-
 
 ## v1.0.1 (2024-04-29)
 
@@ -138,7 +155,6 @@ docs: change image links in readme to absolute ([`bd60345`](https://github.com/g
 * Merge pull request #3 from geddy11/rtd
 
 build: fix readthedocs build ([`d738550`](https://github.com/geddy11/sysloss/commit/d73855035e6256706a9371e78534158ca27792f6))
-
 
 ## v1.0.0 (2024-04-24)
 
