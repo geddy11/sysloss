@@ -55,7 +55,8 @@ version_toml = [
     "pyproject.toml:tool.poetry.version",
 ]                                                    # version location
 version_variables = [
-    "src/sysloss/__init__.py:__version__"
+    "src/sysloss/__init__.py:__version__",
+    "CITATION.cff:version"
 ]
 branch = "main"                                      # branch to make releases of
 changelog_file = "CHANGELOG.md"                      # changelog file
