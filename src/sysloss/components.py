@@ -177,6 +177,16 @@ class _ComponentInterface(metaclass=_ComponentMeta):
 class Source:
     """The Source component must be the root of a system or subsystem.
 
+    LIMITS_DEFAULT = {
+        "vi": [0.0, 1.0e6],
+        "vo": [0.0, 1.0e6],
+        "ii": [0.0, 1.0e6],
+        "io": [0.0, 1.0e6],
+        "pi": [0.0, 1.0e6],
+        "po": [0.0, 1.0e6],
+        "pl": [0.0, 1.0e6],
+        "tr": [0.0, 1.0e6]}
+
     Parameters
     ----------
     name : str
@@ -206,7 +216,7 @@ class Source:
         name: str,
         *,
         vo: float,
-        rs: float = RS_DEFAULT,
+        rs: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
@@ -287,11 +297,11 @@ class PLoad:
     pwr : float
         Load power (W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, tr
+         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, ii, tr
     pwrs : float, optional
-        Load sleep power (W), by default PWRS_DEFAULT
+        Load sleep power (W), by default 0.0.
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
     """
 
     @property
@@ -310,8 +320,8 @@ class PLoad:
         *,
         pwr: float,
         limits: dict = LIMITS_DEFAULT,
-        pwrs: float = PWRS_DEFAULT,
-        rt: float = RT_DEFAULT,
+        pwrs: float = 0.0,
+        rt: float = 0.0,
     ):
         self._params = {}
         self._params["name"] = name
@@ -397,11 +407,11 @@ class ILoad(PLoad):
     ii : float
         Load current (A).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, pi, tr
+         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, pi, tr
     iis : float, optional
-        Load sleep current (A), by default PWRS_DEFAULT
+        Load sleep current (A), by default 0.0.
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
     """
 
     def __init__(
@@ -410,8 +420,8 @@ class ILoad(PLoad):
         *,
         ii: float,
         limits: dict = LIMITS_DEFAULT,
-        iis: float = IIS_DEFAULT,
-        rt: float = RT_DEFAULT,
+        iis: float = 0.0,
+        rt: float = 0.0,
     ):
         self._params = {}
         self._params["name"] = name
@@ -483,9 +493,9 @@ class RLoad(PLoad):
     rs : float
         Load resistance (ohm).
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr
+         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, ii, pi, tr
     """
 
     def __init__(
@@ -493,7 +503,7 @@ class RLoad(PLoad):
         name: str,
         *,
         rs: float,
-        rt: float = RT_DEFAULT,
+        rt: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
@@ -562,9 +572,9 @@ class RLoss:
     rs : float
         Loss resistance (ohm).
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     """
 
     @property
@@ -584,7 +594,7 @@ class RLoss:
         name: str,
         *,
         rs: float,
-        rt: float = RT_DEFAULT,
+        rt: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
@@ -685,9 +695,9 @@ class VLoss:
     vdrop : float | dict
         Voltage drop (V), a constant value (float) or interpolation data (dict).
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     """
 
     @property
@@ -707,7 +717,7 @@ class VLoss:
         name: str,
         *,
         vdrop: float | dict,
-        rt: float = RT_DEFAULT,
+        rt: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
     ):
         self._params = {}
@@ -840,13 +850,13 @@ class Converter:
     eff : float | dict
         Converter efficiency, a constant value (float) or interpolation data (dict).
     iq : float, optional
-        Quiescent (no-load) current (A)., by default 0.0
+        Quiescent (no-load) current (A)., by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
-        Sleep (shut-down) current (A), by default 0.0
+        Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
 
     Raises
     ------
@@ -872,10 +882,10 @@ class Converter:
         *,
         vo: float,
         eff: float | dict,
-        iq: float = IQ_DEFAULT,
+        iq: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
-        iis: float = IIS_DEFAULT,
-        rt: float = RT_DEFAULT,
+        iis: float = 0.0,
+        rt: float = 0.0,
     ):
         self._params = {}
         self._params["name"] = name
@@ -1044,16 +1054,16 @@ class LinReg:
         Converter name.
     vo : float
         Output voltage (V).
-    vdrop : float
-        Dropout voltage (V).
+    vdrop : float, optional
+        Dropout voltage (V), by default 0.0.
     iq : float | dict, optional
-        Ground current (A)., by default 0.0
+        Ground current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
-        Sleep (shut-down) current (A), by default 0.0
+        Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
-        Thermal resistance (°C/W).
+        Thermal resistance (°C/W), by default 0.0.
 
     Raises
     ------
@@ -1078,11 +1088,11 @@ class LinReg:
         name: str,
         *,
         vo: float,
-        vdrop: float = VDROP_DEFAULT,
-        iq: float = IQ_DEFAULT,
+        vdrop: float = 0.0,
+        iq: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
-        iis: float = IIS_DEFAULT,
-        rt: float = RT_DEFAULT,
+        iis: float = 0.0,
+        rt: float = 0.0,
     ):
         self._params = {}
         self._params["name"] = name
