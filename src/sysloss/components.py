@@ -20,7 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Components that can be added to the system."""
+"""Components that can be added to the system.
+
+Constants
+---------
+LIMITS_DEFAULT = {
+    | "vi": [0.0, 1.0e6], # input voltage (V)
+    | "vo": [0.0, 1.0e6], # output voltage (V)
+    | "ii": [0.0, 1.0e6], # input current (A)
+    | "io": [0.0, 1.0e6], # output current (A)
+    | "pi": [0.0, 1.0e6], # input power (W)
+    | "po": [0.0, 1.0e6], # output power (W)
+    | "pl": [0.0, 1.0e6], # power loss (W)
+    | "tr": [0.0, 1.0e6]} # temperature rise (°C)
+
+"""
 
 from enum import Enum, unique
 import toml
@@ -49,14 +63,14 @@ RT_DEFAULT = 0.0
 VDROP_DEFAULT = 0.0
 PWRS_DEFAULT = 0.0
 LIMITS_DEFAULT = {
-    "vi": [0.0, MAX_DEFAULT],
-    "vo": [0.0, MAX_DEFAULT],
-    "ii": [0.0, MAX_DEFAULT],
-    "io": [0.0, MAX_DEFAULT],
-    "pi": [0.0, MAX_DEFAULT],
-    "po": [0.0, MAX_DEFAULT],
-    "pl": [0.0, MAX_DEFAULT],
-    "tr": [0.0, MAX_DEFAULT],
+    "vi": [0.0, MAX_DEFAULT],  # input voltage (V)
+    "vo": [0.0, MAX_DEFAULT],  # output voltage (V)
+    "ii": [0.0, MAX_DEFAULT],  # input current (A)
+    "io": [0.0, MAX_DEFAULT],  # output current (A)
+    "pi": [0.0, MAX_DEFAULT],  # input power (W)
+    "po": [0.0, MAX_DEFAULT],  # output power (W)
+    "pl": [0.0, MAX_DEFAULT],  # power loss (W)
+    "tr": [0.0, MAX_DEFAULT],  # temperature rise (°C)
 }
 
 
@@ -177,16 +191,6 @@ class _ComponentInterface(metaclass=_ComponentMeta):
 class Source:
     """The Source component must be the root of a system or subsystem.
 
-    LIMITS_DEFAULT = {
-        "vi": [0.0, 1.0e6],
-        "vo": [0.0, 1.0e6],
-        "ii": [0.0, 1.0e6],
-        "io": [0.0, 1.0e6],
-        "pi": [0.0, 1.0e6],
-        "po": [0.0, 1.0e6],
-        "pl": [0.0, 1.0e6],
-        "tr": [0.0, 1.0e6]}
-
     Parameters
     ----------
     name : str
@@ -194,9 +198,10 @@ class Source:
     vo : float
         Output voltage.
     rs : float, optional
-        Source resistance., by default 0.0
+        Source resistance, by default 0.0
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT. The following limits apply: io, po, pl.
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: io, po, pl.
+
     """
 
     @property
@@ -297,11 +302,12 @@ class PLoad:
     pwr : float
         Load power (W).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, ii, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, tr
     pwrs : float, optional
         Load sleep power (W), by default 0.0.
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
+
     """
 
     @property
@@ -407,11 +413,12 @@ class ILoad(PLoad):
     ii : float
         Load current (A).
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, pi, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, pi, tr
     iis : float, optional
         Load sleep current (A), by default 0.0.
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
+
     """
 
     def __init__(
@@ -495,7 +502,8 @@ class RLoad(PLoad):
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, ii, pi, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr
+
     """
 
     def __init__(
@@ -574,7 +582,8 @@ class RLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+
     """
 
     @property
@@ -687,6 +696,14 @@ class VLoss:
     """Voltage loss.
 
     This loss element is connected in series with other elements.
+    The voltage drop can be either a constant (float) or interpolated.
+    Interpolation data dict for voltage drop can be either 1D (function of output current only):
+
+    ``vdrop= {vi = [2.5], io = [0.1, 0.5, 0.9], vdrop = [[0.23, 0.41, 0.477]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``vdrop = {vi = [2.5, 5.0, 12.0], io = [0.1, 0.5, 0.9], vdrop = [[0.23, 0.34, 0.477], [0.27, 0.39, 0.51], [0.3, 0.41, 0.57]]}``
 
     Parameters
     ----------
@@ -697,7 +714,8 @@ class VLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+
     """
 
     @property
@@ -841,6 +859,15 @@ class VLoss:
 class Converter:
     """Voltage converter.
 
+    The converter efficiency can be either a constant (float) or interpolated.
+    Interpolation data dict for efficiency can be either 1D (function of output current only):
+
+    ``eff = {vi = [3.3], io = [0.1, 0.5, 0.9], eff = [[0.55, 0.78, 0.92]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``eff = {vi = [3.3, 5.0, 12.0], io = [0.1, 0.5, 0.9], eff = [[0.55, 0.78, 0.92], [0.5, 0.74, 0.83], [0.4, 0.6, 0.766]]}``
+
     Parameters
     ----------
     name : str
@@ -850,9 +877,9 @@ class Converter:
     eff : float | dict
         Converter efficiency, a constant value (float) or interpolation data (dict).
     iq : float, optional
-        Quiescent (no-load) current (A)., by default 0.0.
+        Quiescent (no-load) current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
@@ -862,6 +889,7 @@ class Converter:
     ------
     ValueError
         If efficiency is 0.0 or > 1.0.
+
     """
 
     @property
@@ -929,6 +957,7 @@ class Converter:
             Converter name
         fname : str
             File name.
+
         """
         with open(fname, "r") as f:
             config = toml.load(f)
@@ -1044,9 +1073,18 @@ class Converter:
 
 
 class LinReg:
-    """Linear voltage converter.
+    """Linear voltage regulator.
 
     If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
+
+    The regualtor ground current can be either a constant (float) or interpolated.
+    Interpolation data dict for ground current can be either 1D (function of output current only):
+
+    ``iq = {vi = [5.0], io = [0.0, 0.05, 0.1], iq = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``iq = {vi = [2.5, 5.0], io = [0.0, 0.05, 0.1], iq = [[1.2e-6, 0.34e-3, 0.64e-3], [2.0e-6, 0.5e-3, 0.85e-3]]}``
 
     Parameters
     ----------
@@ -1059,7 +1097,7 @@ class LinReg:
     iq : float | dict, optional
         Ground current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits., by default LIMITS_DEFAULT (see Source). The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
@@ -1069,6 +1107,7 @@ class LinReg:
     ------
     ValueError
         If vdrop > vo.
+
     """
 
     @property

@@ -56,7 +56,9 @@ import sysloss
 
 
 class System:
-    """System to be analyzed. The first component of a system must always be a :py:class:`~components.Source`.
+    """System to be analyzed.
+
+    The first component of a system must always be a :py:class:`~components.Source`.
 
     Parameters
     ----------
@@ -69,6 +71,11 @@ class System:
     ------
     ValueError
         If `source` is not a Source class.
+
+    Examples
+    --------
+    >>> sys = System("System name", Source("Vin", vo=12.0))
+
     """
 
     def __init__(self, name: str, source: Source):
@@ -101,6 +108,11 @@ class System:
         -------
         System
             A new `System` instance.
+
+        Examples
+        --------
+        >>> sys = System.from_file("my_system.json")
+
         """
         with open(fname, "r") as f:
             sys = json.load(f)
@@ -291,6 +303,12 @@ class System:
         ------
         ValueError
             If parent does not allow connection to component.
+
+        Examples
+        --------
+        >>> sys.add_comp("Vin", comp=Converter("Buck", vo=1.8, eff=0.87))
+        >>> sys.add_comp("Buck", comp=PLoad("MCU", pwr=0.015))
+
         """
         # check that parent exists
         self._chk_parent(parent)
@@ -322,6 +340,11 @@ class System:
         ------
         ValueError
             If `source` is not a Source class.
+
+        Examples
+        --------
+        >>> sys.add_source(Source("5V", vo=5.0, limits={"io": [0.0, 0.5]}))
+
         """
         self._chk_name(source._params["name"])
         if not isinstance(source, Source):
@@ -349,6 +372,11 @@ class System:
         ValueError
             If trying to change a `source` component to a different type, or
             if the parent does not accept a connection to the new component.
+
+        Examples
+        --------
+        >>> sys.change_comp("Buck", comp=LinReg("LDO", vo=1.8))
+
         """
         # if component name changes, check that it is unique
         if name != comp._params["name"]:
@@ -393,6 +421,11 @@ class System:
         ValueError
             If the component does not exist, is the last source or
             a source with `del_childs` set to False.
+
+        Examples
+        --------
+        >>> sys.del_comp("Buck", del_childs=True)
+
         """
         eidx = self._get_index(name)
         if eidx == -1:
@@ -441,6 +474,13 @@ class System:
         ------
         ValueError
             If the component name is invalid.
+
+
+        Examples
+        --------
+        >>> sys.tree()
+        >>> sys.tree("5V")
+
         """
         if not name == "":
             if not name in self._g.attrs["nodes"].keys():
@@ -654,6 +694,13 @@ class System:
             If the specified phase is not defined. See :py:meth:`~system.System.set_phases`.
         RuntimeError
             If a steady-state solution has not been found after `maxiter` iterations.
+
+        Examples
+        --------
+        >>> sys.solve()
+        >>> sys.solve(energy=True)
+        >>> sys.solve(itol=1.0e-7, tags={"Column name": value})
+
         """
         self._rel_update()
         phase_list = [""]
@@ -874,6 +921,12 @@ class System:
         -------
         pd.DataFrame
             System parameters.
+
+        Examples
+        --------
+        >>> sys.params()
+        >>> sys.params(limits=True)
+
         """
         self._rel_update()
         names, typ, parent, vo, vdrop = [], [], [], [], []
@@ -965,6 +1018,11 @@ class System:
         ValueError
             If the dict contains less than two load phases or 'N/A' is used as
             a phase name.
+
+        Examples
+        --------
+        >>> sys.set_sys_phases({"sleep": 120.0, "transmit": 0.1, "move": 5.5})
+
         """
         if len(list(phases.keys())) < 2 and phases != {}:
             raise ValueError("There must be at least two phases!")
@@ -979,11 +1037,27 @@ class System:
         -------
         dict
             System load phases. Empty dict if no phases have been defined.
+
+        Examples
+        --------
+        >>> sys.get_sys_phases()
+        {"sleep": 120.0, "transmit": 0.1, "move": 5.5}
+
         """
         return self._g.attrs["phases"]
 
     def set_comp_phases(self, name: str, phase_conf: dict | list):
-        """Define component load phases
+        """Define component load phases.
+
+        Components that have no load phases defined are always active.
+
+        The :py:class:`~components.Converter` and :py:class:`~components.Linreg`
+        components support a list of active phases, and go
+        into sleep mode if not active. In sleep mode, all components connected to the
+        output are automatically turned off.
+
+        The load components supports a dict with specific load values for each phase. If
+        a phase is not included in the dict, the load is turned off in that phase.
 
         Parameters
         ----------
@@ -996,6 +1070,12 @@ class System:
         ------
         ValueError
             Component does not exist, or phase configuration is invalid.
+
+        Examples
+        --------
+        >>> sys.set_comp_phases("Buck", ["transmit", "move"])
+        >>> sys.set_comp_phases("MCU", {"sleep":1e-6, "transmit":0.15, "move":0.085})
+
         """
         cidx = self._get_index(name)
         if cidx == -1:
@@ -1016,6 +1096,11 @@ class System:
         -------
         pd.DataFrame
             DataFrame with parameters and load phases.
+
+        Examples
+        --------
+        >>> sys.phases()
+
         """
         self._rel_update()
         if self._g.attrs["phases"] == {}:
@@ -1109,6 +1194,11 @@ class System:
             Filename.
         indent : int, optional
             Indentation to use in .json file, by default 4
+
+        Examples
+        --------
+        >>> sys.save("System 42.json", indent=3)
+
         """
         self._rel_update()
         sys = {
@@ -1182,6 +1272,12 @@ class System:
         ------
         ValueError
             If component name is not found.
+
+        Examples
+        --------
+        >>> fig1 = sys.plot_interp("Buck", cmap="magma")
+        >>> fig2 = sys.plot_interp("Buck", inpdata=False, plot3d=True)
+
         """
         if not name in self._g.attrs["nodes"].keys():
             raise ValueError("Component name is not valid!")
@@ -1306,6 +1402,11 @@ class System:
         ------
         ValueError
             If battery name is not found or component is not a source.
+
+        Examples
+        --------
+        >>> sys.batt_life("LiPo 3.7V", cutoff=2.9, pfunc=my_probe_func, dfunc=my_deplete_func)
+
         """
         # check for valid source
         self._chk_parent(battery)
