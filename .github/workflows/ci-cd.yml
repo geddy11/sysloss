@@ -23,14 +23,17 @@ jobs:
       - name: Install package
         run: poetry install
 
-      - name: Linter
+      - name: Black linter
         uses: psf/black@stable
 
       - name: Test with pytest
         run: poetry run pytest tests/ --cov=sysloss --cov-report=xml
 
-      - name: codacy
+      - name: codacy report
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml
+        with:
+          token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          slug: geddy11/sysloss
 
       - name: Use Codecov to track coverage
         uses: codecov/codecov-action@v4.0.1
