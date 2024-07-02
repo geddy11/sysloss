@@ -4,6 +4,7 @@
 <p align="center">
 <a href="https://github.com/geddy11/sysloss/actions"><img alt="Actions Status" src="https://github.com/geddy11/sysloss/actions/workflows/ci-cd.yml/badge.svg"></a>
 <a href="https://codecov.io/github/geddy11/sysloss"><img src="https://codecov.io/github/geddy11/sysloss/graph/badge.svg?token=9L1ZMN0UET"/></a>
+<a href="https://app.codacy.com/gh/geddy11/sysloss/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/37b586ca428240418f0364c15472134b"/></a>
 <a><img alt="PyPI" src="https://img.shields.io/pypi/v/sysloss"></a>
 <a><img alt="Conda" src="https://anaconda.org/conda-forge/sysloss/badges/version.svg"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
