@@ -29,11 +29,11 @@ jobs:
       - name: Test with pytest
         run: poetry run pytest tests/ --cov=sysloss --cov-report=xml
 
-      - name: codacy report
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
-          token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          slug: geddy11/sysloss
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
 
       - name: Use Codecov to track coverage
         uses: codecov/codecov-action@v4.0.1
