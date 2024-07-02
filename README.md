@@ -1,15 +1,15 @@
 
 ![](https://github.com/geddy11/sysloss/raw/main/docs/sysloss.svg)
 
-<p align="center">
+<p style="text-align: center;">
 <a href="https://github.com/geddy11/sysloss/actions"><img alt="Actions Status" src="https://github.com/geddy11/sysloss/actions/workflows/ci-cd.yml/badge.svg"></a>
-<a href="https://codecov.io/github/geddy11/sysloss"><img src="https://codecov.io/github/geddy11/sysloss/graph/badge.svg?token=9L1ZMN0UET"/></a>
-<a href="https://app.codacy.com/gh/geddy11/sysloss/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/37b586ca428240418f0364c15472134b"/></a>
-<a><img alt="PyPI" src="https://img.shields.io/pypi/v/sysloss"></a>
-<a><img alt="Conda" src="https://anaconda.org/conda-forge/sysloss/badges/version.svg"></a>
+<a href="https://codecov.io/github/geddy11/sysloss"><img alt="Code coverage" src="https://codecov.io/github/geddy11/sysloss/graph/badge.svg?token=9L1ZMN0UET"/></a>
+<a href="https://app.codacy.com/gh/geddy11/sysloss/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img alt="Codacy" src="https://app.codacy.com/project/badge/Grade/37b586ca428240418f0364c15472134b"/></a>
+<a href="https://pypi.org/project/sysloss/"><img alt="PyPI" src="https://img.shields.io/pypi/v/sysloss"></a>
+<a href="https://anaconda.org/conda-forge/sysloss"><img alt="Conda" src="https://anaconda.org/conda-forge/sysloss/badges/version.svg"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://www.conventionalcommits.org"><img alt="Conv. commits" src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white"></a>
-<a href="https://doi.org/10.5281/zenodo.11086060"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11086060.svg" alt="DOI"></a>
+<a href="https://doi.org/10.5281/zenodo.11086060"><img alt="Zenodo DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.11086060.svg" alt="DOI"></a>
 </p>
 
 # sysLoss
@@ -47,7 +47,8 @@ Bluetooth sensor
         └── MCU
 ```
 ```python
-bts.solve()
+df = bts.solve()
+print(df)
 ```
 ![result](https://github.com/geddy11/sysloss/raw/main/docs/bts.png)
 
