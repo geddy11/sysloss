@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v1.4.0 (2024-09-02)
+
+### Build
+
+* build: fix CITATION.cff version update variable ([`298ea1c`](https://github.com/geddy11/sysloss/commit/298ea1cff2f758d6e1590ea1cb7fe73991082003))
+
+### Ci
+
+* ci: switch to codacy github action ([`a5b758c`](https://github.com/geddy11/sysloss/commit/a5b758cdbf026d0416161930281c5588c7c81b4a))
+
+* ci: add codacy token ([`532b850`](https://github.com/geddy11/sysloss/commit/532b850cbdafbba39f8ae4686f6f542293a0c93b))
+
+* ci: add codacy job ([`15bb292`](https://github.com/geddy11/sysloss/commit/15bb292aedc876a3cddb7448d2faa7df70507560))
+
+### Documentation
+
+* docs: fix typos in battery life tutorial ([`fa36896`](https://github.com/geddy11/sysloss/commit/fa36896cb4a0e83f04f17c46ce3373c879c861ac))
+
+* docs: add links to PyPI and Anaconda on badges ([`0ee0f96`](https://github.com/geddy11/sysloss/commit/0ee0f960047334ad868418e681b5694e8d49ab08))
+
+* docs: add Codacy badge to README.md ([`2d09974`](https://github.com/geddy11/sysloss/commit/2d099744a29593478a0f5aa8548118dcea19ad07))
+
+* docs: add examples to System class api ([`5f95963`](https://github.com/geddy11/sysloss/commit/5f95963f96df8cf783f4c3275a5e027adcb82b62))
+
+* docs: explicit define default parameter values ([`47aa0f1`](https://github.com/geddy11/sysloss/commit/47aa0f17d04bee4abe79ce765a5eeb8b0c77ce71))
+
+* docs: update security.md ([`c3522d9`](https://github.com/geddy11/sysloss/commit/c3522d9bd840ff5238d19b7670d8cd7fdec2d908))
+
+### Feature
+
+* feat: add ambient temperature (ta) as new parameter to .solve() and peak temperature (tp) as a new limit
+
+If thermal resistance is specified on a component, peak temperature shows up as a new column in the results table. Peak temperature is calculated as ambient temperature plus temperature rise. ([`2e74afe`](https://github.com/geddy11/sysloss/commit/2e74afe4eeca521a4f6f95e488b7ea9321eb4ca2))
+
+### Fix
+
+* fix(system): add check of component name and set default load phase in change_comp() ([`1a06e47`](https://github.com/geddy11/sysloss/commit/1a06e47ad14e694451f97f6b84f6587c319c0e38))
+
+### Unknown
+
+* Create SECURITY.md ([`94145e2`](https://github.com/geddy11/sysloss/commit/94145e24eeacc918f0582f78e68eab6384fde62e))
+
+* Merge branch &#39;main&#39; of https://github.com/geddy11/sysloss ([`26227ac`](https://github.com/geddy11/sysloss/commit/26227acab51e7e1ff459fe512319293974198d4d))
+
 ## v1.3.0 (2024-06-19)
 
 ### Build
@@ -11,6 +55,8 @@
 * ci: remove unused jobs in pipeline ([`4849845`](https://github.com/geddy11/sysloss/commit/48498455837e54bee43815c86cc31fd8a55f31de))
 
 ### Documentation
+
+* docs: add anaconda badge to README.md ([`d9f08c1`](https://github.com/geddy11/sysloss/commit/d9f08c19485b2adeea57c74ba5c57fa883aa1f46))
 
 * docs: update sysLoss version in CITATION.cff ([`6fb8ad8`](https://github.com/geddy11/sysloss/commit/6fb8ad82a1943a4d8fe897b4244ac395e84d7476))
 
@@ -31,8 +77,6 @@
 ### Documentation
 
 * docs: correct toml interpolation data format in &#34;Component parameter files&#34; page ([`9275463`](https://github.com/geddy11/sysloss/commit/92754635952bcecb1da80cc7739135b7aad43d64))
-
-* docs: remove output from import packages cell ([`0b56c35`](https://github.com/geddy11/sysloss/commit/0b56c35ae4d83552c9374302c33edaf3ea54f533))
 
 ### Feature
 
@@ -75,6 +119,8 @@
 * ci: change id in conda receipe ([`87513c3`](https://github.com/geddy11/sysloss/commit/87513c3b7cdba7ddb24ea9976534d2fa1607369b))
 
 ### Documentation
+
+* docs: remove output from import packages cell ([`0b56c35`](https://github.com/geddy11/sysloss/commit/0b56c35ae4d83552c9374302c33edaf3ea54f533))
 
 * docs: extend battery life notebook with new chapter on battery life optimization ([`230f4f4`](https://github.com/geddy11/sysloss/commit/230f4f4e92a83d5e7e00ac3f9e8b12bd1e12dd56))
 
