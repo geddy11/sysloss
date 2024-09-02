@@ -203,11 +203,16 @@ def test_case10():
     """Change component"""
     case10 = System("Case10 system", Source("24V system", vo=24.0, rs=12e-3))
     case10.add_comp("24V system", comp=Converter("Buck", vo=3.3, eff=0.80))
+    case10.add_comp("Buck", comp=PLoad("Load", pwr=0.5))
     case10.change_comp("Buck", comp=LinReg("LDO", vo=3.3))
     with pytest.raises(ValueError):
         case10.change_comp("LDO", comp=Source("5V", vo=5.0))
     with pytest.raises(ValueError):
         case10.change_comp("24V system", comp=LinReg("LDO2", vo=3.3))
+    with pytest.raises(ValueError):
+        case10.change_comp("Non-exist", comp=Source("5V", vo=5.0))
+    df = case10.solve()
+    assert len(df) == 4, "Case10 parameters row count"
 
 
 def test_case11():

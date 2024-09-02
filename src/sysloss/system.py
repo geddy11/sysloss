@@ -222,6 +222,13 @@ class System:
 
         return True
 
+    def _chk_comp(self, comp: str):
+        """Check if component exists"""
+        if not comp in self._g.attrs["nodes"].keys():
+            raise ValueError('Component name "{}" not found!'.format(comp))
+
+        return True
+
     def _chk_name(self, name: str):
         """Check if component name is valid"""
         # check if name exists
@@ -371,6 +378,7 @@ class System:
         ------
         ValueError
             If trying to change a `source` component to a different type, or
+            if the target component does not exist or
             if the parent does not accept a connection to the new component.
 
         Examples
@@ -378,6 +386,8 @@ class System:
         >>> sys.change_comp("Buck", comp=LinReg("LDO", vo=1.8))
 
         """
+        # check that component exists
+        self._chk_comp(name)
         # if component name changes, check that it is unique
         if name != comp._params["name"]:
             self._chk_name(comp._params["name"])
@@ -401,6 +411,9 @@ class System:
         # replace node name in graph dict
         del [self._g.attrs["nodes"][name]]
         self._g.attrs["nodes"][comp._params["name"]] = eidx
+        # delete old phase config and set new default
+        del [self._g.attrs["phase_conf"][name]]
+        self._g.attrs["phase_conf"][comp._params["name"]] = {}
 
     def del_comp(self, name: str, *, del_childs: bool = True):
         """Delete component.
