@@ -258,18 +258,23 @@ def test_case13():
     case13 = System("Case13 system", Source("3.3V", vo=3.3))
     case13.add_source(Source("12V", vo=12, limits={"io": [0, 1e-3]}))
     case13.add_comp("3.3V", comp=PLoad("MCU", pwr=0.2))
-    case13.add_comp("12V", comp=PLoad("Test", pwr=1.5))
+    case13.add_comp(
+        "12V", comp=PLoad("Test", pwr=1.5, rt=10, limits={"tp": [-40.0, 39.0]})
+    )
     with pytest.raises(ValueError):
         case13.add_source(PLoad("Test2", pwr=1.5))
     case13.add_source(Source("3.3V aux", vo=3.3))
     df = case13.solve()
     assert len(df) == 9, "Case13 solution row count"
-    assert df.shape[1] == 12, "Case13 column count"
+    assert df.shape[1] == 14, "Case13 column count"
     assert (
         df[df["Component"] == "System total"]["Warnings"][8] == "Yes"
     ), "Case 13 total warnings"
     assert (
         df[df["Component"] == "Subsystem 12V"]["Warnings"][6] == "Yes"
+    ), "Case 13 Subsystem 12V warnings"
+    assert (
+        df[df["Component"] == "Test"]["Warnings"][2] == "tp"
     ), "Case 13 Subsystem 12V warnings"
     case13.save("tests/unit/case13.json")
     with pytest.raises(ValueError):
@@ -362,11 +367,11 @@ def test_case15():
     assert len(df) == 2 * expl + 1, "Case15 solution row count (all phases)"
     df = case15.solve(tags={"Tag1": "one"})
     assert df.shape[0] == 2 * expl + 1, "Case15 tagged solution row count (all phases)"
-    assert df.shape[1] == 14, "Case15 tagged solution column count (all phases)"
+    assert df.shape[1] == 15, "Case15 tagged solution column count (all phases)"
     df = case15.solve(tags={"Tag1": "one"}, energy=True)
     assert df.shape[0] == 2 * expl + 1, "Case15 tagged solution row count (all phases)"
     assert (
-        df.shape[1] == 15
+        df.shape[1] == 16
     ), "Case15 tagged solution column count with energy (all phases)"
 
 

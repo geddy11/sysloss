@@ -32,8 +32,8 @@ LIMITS_DEFAULT = {
     | "pi": [0.0, 1.0e6], # input power (W)
     | "po": [0.0, 1.0e6], # output power (W)
     | "pl": [0.0, 1.0e6], # power loss (W)
-    | "tr": [0.0, 1.0e6]} # temperature rise (°C)
-
+    | "tr": [0.0, 1.0e6], # temperature rise (°C)
+    | "tp": [-1.0e6, 1.0e6]} # peak temperature (°C)
 """
 
 from enum import Enum, unique
@@ -71,6 +71,7 @@ LIMITS_DEFAULT = {
     "po": [0.0, MAX_DEFAULT],  # output power (W)
     "pl": [0.0, MAX_DEFAULT],  # power loss (W)
     "tr": [0.0, MAX_DEFAULT],  # temperature rise (°C)
+    "tp": [-MAX_DEFAULT, MAX_DEFAULT],  # peak temperature (°C)
 }
 
 
@@ -93,9 +94,13 @@ def _get_warns(limits, checks):
     warn = ""
     keys = list(checks.keys())
     for key in keys:
-        lim = _get_opt(limits, key, [0, MAX_DEFAULT])
-        if abs(checks[key]) > abs(lim[1]) or abs(checks[key]) < abs(lim[0]):
-            warn += key + " "
+        lim = _get_opt(limits, key, LIMITS_DEFAULT[key])
+        if key == "tp":
+            if checks[key] > lim[1] or checks[key] < lim[0]:
+                warn += key + " "
+        else:
+            if abs(checks[key]) > abs(lim[1]) or abs(checks[key]) < abs(lim[0]):
+                warn += key + " "
     return warn.strip()
 
 
@@ -269,16 +274,16 @@ class Source:
             return 0.0
         return self._params["vo"] - self._params["rs"] * io
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Calculate power and loss in component"""
         if self._params["vo"] == 0.0:
-            return 0.0, 0.0, 100.0, 0.0
+            return 0.0, 0.0, 100.0, 0.0, 0.0
         ipwr = abs(self._params["vo"] * io)
         loss = self._params["rs"] * io * io
         opwr = ipwr - loss
-        return ipwr, loss, _get_eff(ipwr, opwr), 0.0
+        return ipwr, loss, _get_eff(ipwr, opwr), 0.0, 0.0
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         return _get_warns(
             self._limits, {"io": io, "po": vo * io, "pl": self._params["rs"] * io * io}
@@ -302,7 +307,7 @@ class PLoad:
     pwr : float
         Load power (W).
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, tr, tp
     pwrs : float, optional
         Load sleep power (W), by default 0.0.
     rt : float, optional
@@ -380,19 +385,21 @@ class PLoad:
         """Load output voltage is always 0"""
         return 0.0
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Calculate power and loss in component"""
         if vi == 0.0:
-            return 0.0, 0.0, 100.0, 0.0
-        return abs(vi * ii), 0.0, 100.0, abs(vi * ii) * self._params["rt"]
+            return 0.0, 0.0, 100.0, 0.0, 0.0
+        tr = abs(vi * ii) * self._params["rt"]
+        return abs(vi * ii), 0.0, 100.0, tr, tr + ta
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
         tr = vi * ii * self._params["rt"]
-        return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr})
+        tp = tr + ta
+        return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr, "tp": tp})
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
@@ -413,7 +420,7 @@ class ILoad(PLoad):
     ii : float
         Load current (A).
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, pi, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, pi, tr, tp
     iis : float, optional
         Load sleep current (A), by default 0.0.
     rt : float, optional
@@ -473,13 +480,14 @@ class ILoad(PLoad):
 
         return abs(i)
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
         tr = vi * ii * self._params["rt"]
-        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr})
+        tp = tr + ta
+        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr, "tp": tp})
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
@@ -502,7 +510,7 @@ class RLoad(PLoad):
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr, tp
 
     """
 
@@ -552,13 +560,16 @@ class RLoad(PLoad):
             r = phase_conf[phase]
         return abs(vi) / r
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         if phase_conf and phase != "":
             if phase not in phase_conf:
                 return ""
         tr = vi * ii * self._params["rt"]
-        return _get_warns(self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr})
+        tp = tr + ta
+        return _get_warns(
+            self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr, "tp": tp}
+        )
 
     def _get_params(self, pdict):
         """Return dict with component parameters"""
@@ -582,7 +593,7 @@ class RLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
 
     """
 
@@ -657,19 +668,21 @@ class RLoss:
             )
         )
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Calculate power and loss in component"""
         vout = vi - self._params["rs"] * io * np.sign(vi)
         if np.sign(vout) != np.sign(vi):
-            return 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), loss * self._params["rt"]
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), tr, ta + tr
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         pl = abs(vi) * ii - abs(vo) * io
         tr = pl * self._params["rt"]
+        tp = tr + ta
         return _get_warns(
             self._limits,
             {
@@ -681,6 +694,7 @@ class RLoss:
                 "po": abs(vo * io),
                 "pl": pl,
                 "tr": tr,
+                "tp": tp,
             },
         )
 
@@ -714,7 +728,7 @@ class VLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
 
     """
 
@@ -804,19 +818,21 @@ class VLoss:
             )
         )
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Calculate power and loss in component"""
         vout = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
         if np.sign(vout) != np.sign(vi):
-            return 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), loss * self._params["rt"]
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), tr, ta + tr
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf={}):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
         pl = abs(vi) * ii - abs(vo) * io
         tr = pl * self._params["rt"]
+        tp = tr + ta
         return _get_warns(
             self._limits,
             {
@@ -828,6 +844,7 @@ class VLoss:
                 "po": abs(vo * io),
                 "pl": pl,
                 "tr": tr,
+                "tp": tp,
             },
         )
 
@@ -879,7 +896,7 @@ class Converter:
     iq : float, optional
         Quiescent (no-load) current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
@@ -1009,7 +1026,7 @@ class Converter:
                 v = 0.0
         return v
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf=[]):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
         """Calculate power and loss in component"""
         if io == 0.0:
             loss = abs(self._params["iq"] * vi)
@@ -1020,14 +1037,18 @@ class Converter:
             if phase not in phase_conf:
                 loss = abs(self._params["iis"] * vi)
                 pwr = abs(self._params["iis"] * vi)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), loss * self._params["rt"]
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf=[]):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
         """Check limits"""
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        pi, pl, _, tr = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        pi, pl, _, tr, tp = self._solv_pwr_loss(
+            vi, vo, ii, io, ta, phase, phase_conf=[]
+        )
+        tp = tr + ta
         return _get_warns(
             self._limits,
             {
@@ -1039,6 +1060,7 @@ class Converter:
                 "po": pi - pl,
                 "pl": pl,
                 "tr": tr,
+                "tp": tp,
             },
         )
 
@@ -1097,7 +1119,7 @@ class LinReg:
     iq : float | dict, optional
         Ground current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
@@ -1221,7 +1243,7 @@ class LinReg:
             return v
         return -v
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, phase, phase_conf=[]):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
         """Calculate power and loss in component"""
         v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
         if vi == 0.0 or v == 0.0:
@@ -1236,14 +1258,18 @@ class LinReg:
         elif phase not in phase_conf:
             loss = abs(self._params["iis"] * vi)
             pwr = abs(self._params["iis"] * vi)
-        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), loss * self._params["rt"]
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
 
-    def _solv_get_warns(self, vi, vo, ii, io, phase, phase_conf=[]):
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
         """Check limits"""
         if phase_conf:
             if phase not in phase_conf:
                 return ""
-        pi, pl, _, tr = self._solv_pwr_loss(vi, vo, ii, io, phase, phase_conf=[])
+        pi, pl, _, tr, tp = self._solv_pwr_loss(
+            vi, vo, ii, io, ta, phase, phase_conf=[]
+        )
+        tp = tr + ta
         return _get_warns(
             self._limits,
             {
@@ -1255,6 +1281,7 @@ class LinReg:
                 "po": pi - pl,
                 "pl": pl,
                 "tr": tr,
+                "tp": tp,
             },
         )
 

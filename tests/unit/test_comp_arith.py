@@ -83,7 +83,9 @@ def test_source(source, name, vo, rs):
             source._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3]), v
         ), "Check source output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, eff, tr = source._solv_pwr_loss(plt[0], vo, plt[2], plt[3], plt[4])
+        pwr, loss, eff, _, _ = source._solv_pwr_loss(
+            plt[0], vo, plt[2], plt[3], 25.0, plt[4]
+        )
         epwr = abs(vo * plt[3])
         assert close(pwr, epwr), "Check Source power"
         eloss = 0.0 if vo == 0.0 else rs * plt[3] * plt[3]
@@ -123,7 +125,9 @@ def test_rloss(rloss, name, rs, rt):
                 rloss._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3]), v
             ), "Check Loss output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, los, eff, tr = rloss._solv_pwr_loss(plt[0], plt[1], plt[2], plt[3], plt[4])
+        pwr, los, eff, tr, tp = rloss._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], -55.0, plt[4]
+        )
         vo = plt[0] - (plt[3] * abs(rs)) * np.sign(plt[0])
         valid = True if np.sign(vo) == np.sign(plt[0]) else False
         epwr = abs(plt[0] * plt[2]) if valid else 0.0
@@ -137,6 +141,8 @@ def test_rloss(rloss, name, rs, rt):
             ef = 0.0
         assert close(eff, ef), "Check RLoss efficiency"
         assert close(tr, eloss * rt), "Check RLoss temperature rise"
+        if eloss * rt > 0.0:
+            assert close(tp, -55.0 + eloss * rt), "Check RLoss peak temperature"
 
 
 @pytest.fixture()
@@ -170,7 +176,9 @@ def test_vloss(vloss, name, vdrop, rt):
                 vloss._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3]), v
             ), "Check VLoss output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, los, eff, tr = vloss._solv_pwr_loss(plt[0], plt[1], plt[2], plt[3], plt[4])
+        pwr, los, eff, tr, tp = vloss._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], 85.0, plt[4]
+        )
         vo = plt[0] - abs(vdrop) * np.sign(plt[0])
         valid = True if np.sign(vo) == np.sign(plt[0]) else False
         epwr = abs(plt[0] * plt[2]) if valid else 0.0
@@ -184,6 +192,8 @@ def test_vloss(vloss, name, vdrop, rt):
             ef = 0.0
         assert close(eff, ef), "Check VLoss efficiency"
         assert close(tr, los * rt), "Check VLoss temperature rise"
+        if los * rt > 0.0:
+            assert close(tp, 85.0 + los * rt), "Check VLoss peak temperature"
 
 
 @pytest.fixture()
@@ -223,14 +233,16 @@ def test_pload(pload, name, pwr, pwrs, rt, phase_loads):
             pload._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3], phase_loads) == 0.0
         ), "Check PLoad output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, eff, tr = pload._solv_pwr_loss(
-            plt[0], plt[1], plt[2], plt[3], plt[4], phase_loads
+        pwr, loss, eff, tr, tp = pload._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], 19.7, plt[4], phase_loads
         )
         epwr = 0.0 if plt[0] == 0.0 else abs(plt[0] * plt[2])
         assert close(pwr, epwr), "Check PLoad power"
         assert 0.0 == loss, "Check PLoad loss"
         assert 100.0 == eff, "Check PLoad efficiency"
         assert close(tr, epwr * rt), "Check PLoad temperature rise"
+        if epwr * rt > 0.0:
+            assert close(tp, 19.7 + epwr * rt), "Check VLoss peak temperature"
 
 
 @pytest.fixture()
@@ -268,14 +280,16 @@ def test_iload(iload, name, ii, iis, rt, phase_loads):
             iload._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3], phase_loads) == 0.0
         ), "Check ILoad output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, eff, tr = iload._solv_pwr_loss(
-            plt[0], plt[1], plt[2], plt[3], plt[4], phase_loads
+        pwr, loss, eff, tr, tp = iload._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], -43.0, plt[4], phase_loads
         )
         epwr = 0.0 if plt[0] == 0.0 else abs(plt[0] * plt[2])
         assert close(pwr, epwr), "Check ILoad power"
         assert 0.0 == loss, "Check ILoad loss"
         assert 100.0 == eff, "Check ILoad efficiency"
         assert close(tr, epwr * rt), "Check ILoad temperature rise"
+        if epwr * rt > 0.0:
+            assert close(tp, -43.0 + epwr * rt), "Check ILoad peak temperature"
 
 
 @pytest.fixture()
@@ -315,14 +329,16 @@ def test_rload(rload, name, rs, rt, phase_loads):
             rload._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3], phase_loads) == 0.0
         ), "Check RLoad output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, eff, tr = rload._solv_pwr_loss(
-            plt[0], plt[1], plt[2], plt[3], plt[4], phase_loads
+        pwr, loss, eff, tr, tp = rload._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], 55.7, plt[4], phase_loads
         )
         epwr = 0.0 if plt[0] == 0.0 else abs(plt[0] * plt[2])
         assert close(pwr, epwr), "Check RLoad power"
         assert 0.0 == loss, "Check RLoad loss"
         assert 100.0 == eff, "Check RLoad efficiency"
         assert close(tr, epwr * rt), "Check RLoad temperature rise"
+        if epwr * rt > 0.0:
+            assert close(tp, 55.7 + epwr * rt), "Check RLoad peak temperature"
 
 
 @pytest.fixture()
@@ -373,8 +389,8 @@ def test_converter(converter, name, vo, eff, iq, iis, rt, active_phases):
             converter._solv_outp_volt(ovt[0], ovt[1], ovt[2], ovt[3], active_phases), v
         ), "Check Converter output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, ef, tr = converter._solv_pwr_loss(
-            plt[0], vo, plt[2], plt[3], plt[4], active_phases
+        pwr, loss, ef, tr, tp = converter._solv_pwr_loss(
+            plt[0], vo, plt[2], plt[3], 0.0, plt[4], active_phases
         )
         ipwr = abs(plt[0] * plt[2])
         eloss = abs(iq * plt[0]) if plt[3] == 0.0 else ipwr * (1.0 - eff)
@@ -393,6 +409,8 @@ def test_converter(converter, name, vo, eff, iq, iis, rt, active_phases):
             eeff = 100.0 * abs(opwr / ipwr)
         assert close(ef, eeff), "Check Converter efficiency"
         assert close(tr, eloss * rt), "Check Converter temperature rise"
+        if eloss * rt > 0.0:
+            assert close(tp, 0.0 + eloss * rt), "Check Converter peak temperature"
 
 
 @pytest.fixture()
@@ -437,8 +455,8 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
             v * np.sign(vo),
         ), "Check Linreg output voltage"
     for plt in PWR_LOSS_TESTS:
-        pwr, loss, eff, tr = linreg._solv_pwr_loss(
-            plt[0], vo, plt[2], plt[3], plt[4], active_phases
+        pwr, loss, eff, tr, tp = linreg._solv_pwr_loss(
+            plt[0], vo, plt[2], plt[3], 125.0, plt[4], active_phases
         )
         ipwr = abs(plt[0] * plt[2])
         v = min(
@@ -460,3 +478,5 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
             eeff = 100.0 * abs(opwr / ipwr)
         assert close(eff, eeff), "Check LinReg efficiency"
         assert close(tr, eloss * rt), "Check LinReg temperature rise"
+        if eloss * rt > 0.0:
+            assert close(tp, 125.0 + eloss * rt), "Check LinReg peak temperature"
