@@ -1066,7 +1066,7 @@ class Converter:
             return 0.0, STATE_OFF
         if phase_conf:
             if phase not in phase_conf:
-                v = 0.0
+                return 0.0, STATE_OFF
         return v, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
@@ -1291,7 +1291,7 @@ class LinReg:
         if not phase_conf:
             pass
         elif phase not in phase_conf:
-            v = 0.0
+            return 0.0, STATE_OFF
         if self._params["vo"] >= 0.0:
             return v, STATE_DEFAULT
         return -v, STATE_DEFAULT

@@ -471,16 +471,18 @@ def test_converter(converter, name, vo, eff, iq, iis, rt, active_phases):
         for s in VINOFF_STATES:
             state["off"] = s
             v = vo
+            phase_off = False
             if ovt[0] == 0.0 or vo == 0.0 or s:
                 v = 0.0
             elif active_phases != []:
                 if ovt[3] not in active_phases:
                     v = 0.0
+                    phase_off = True
             vs, vstate = converter._solv_outp_volt(
                 ovt[0], ovt[1], ovt[2], ovt[3], active_phases, state
             )
             assert close(vs, v), "Check Converter output voltage"
-            if ovt[0] == 0.0:
+            if ovt[0] == 0.0 or phase_off:
                 assert vstate["off"] == True, "Check Converter state"
             else:
                 assert vstate["off"] == s, "Check Converter state"
@@ -553,16 +555,18 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
         for s in VINOFF_STATES:
             state["off"] = s
             v = min(abs(vo), max(abs(ovt[0]) - vdrop, 0.0))
+            phase_off = False
             if ovt[0] == 0.0 or vo == 0.0 or s:
                 v = 0.0
             elif active_phases != []:
                 if ovt[3] not in active_phases:
                     v = 0.0
+                    phase_off = True
             vs, vstate = linreg._solv_outp_volt(
                 ovt[0], ovt[1], ovt[2], ovt[3], active_phases, state
             )
             assert close(vs, v * np.sign(vo)), "Check LinReg output voltage"
-            if ovt[0] == 0.0:
+            if ovt[0] == 0.0 or phase_off:
                 assert vstate["off"] == True, "Check LinReg state"
             else:
                 assert vstate["off"] == s, "Check LinReg state"
