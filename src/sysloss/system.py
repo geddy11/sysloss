@@ -46,11 +46,11 @@ from sysloss.components import (
     _get_opt,
     _get_mand,
     _get_eff,
-    _Interp0d,
     _Interp1d,
     _Interp2d,
     RS_DEFAULT,
     LIMITS_DEFAULT,
+    STATE_DEFAULT,
 )
 import sysloss
 
@@ -287,7 +287,8 @@ class System:
         vn = max(self._get_nodes()) + 1  # highest node index + 1
         v = list(np.zeros(vn))  # voltages
         i = list(np.zeros(vn))  # currents
-        return v, i
+        s = [{} for x in range(vn)]
+        return v, i, s
 
     def _make_rtree(self, adj, node):
         """Create Rich tree"""
@@ -523,104 +524,56 @@ class System:
 
     def _sys_init(self, phase: str = ""):
         """Create vectors of init values for solver"""
-        v, i = self._sys_vars()
+        v, i, state = self._sys_vars()
         self._set_phase_lkup()
         for n in self._get_nodes():
             v[n] = self._g[n]._get_outp_voltage(phase, self._phase_lkup[n])
             i[n] = self._g[n]._get_inp_current(phase, self._phase_lkup[n])
-        return v, i
+            state[n] = self._g[n]._get_state(phase, self._phase_lkup[n])
+        return v, i, state
 
-    def _fwd_prop(self, v: float, i: float, phase: str = ""):
+    def _fwd_prop(self, v: float, i: float, phase: str = "", state: list = []):
         """Forward propagation of voltages"""
-        vo, _ = self._sys_vars()
+        vo, _, ostate = self._sys_vars()
         # update output voltages (per node)
         for n in self._topo_nodes:
             p = self._parents[n]
             phase_config = self._phase_lkup[n]
-            if self._childs[n] == -1:  # leaf
-                if p == -1:  # root
-                    vo[n] = self._g[n]._solv_outp_volt(
-                        0.0,
-                        0.0,
-                        0.0,
-                        phase,
-                        phase_config,
-                    )
-                else:
-                    vo[n] = self._g[n]._solv_outp_volt(
-                        v[p[0]],
-                        i[n],
-                        0.0,
-                        phase,
-                        phase_config,
-                    )
-            else:
-                # add currents into childs
-                isum = 0
+            vi, ii, io, pstate = 0.0, 0.0, 0.0, STATE_DEFAULT
+            if p != -1:  # not root
+                vi = v[p[0]]
+                ii = i[n]
+                pstate = state[p[0]]
+            if self._childs[n] != -1:  # not leaf
+                # sum currents into childs
                 for c in self._childs[n]:
-                    isum += i[c]
-                if p == -1:  # root
-                    vo[n] = self._g[n]._solv_outp_volt(
-                        0.0,
-                        0.0,
-                        isum,
-                        phase,
-                        phase_config,
-                    )
-                else:
-                    vo[n] = self._g[n]._solv_outp_volt(
-                        v[p[0]],
-                        i[n],
-                        isum,
-                        phase,
-                        phase_config,
-                    )
-        return vo
+                    io += i[c]
+            vo[n], ostate[n] = self._g[n]._solv_outp_volt(
+                vi, ii, io, phase, phase_config, pstate
+            )
 
-    def _back_prop(self, v: float, i: float, phase: str = ""):
+        return vo, ostate
+
+    def _back_prop(self, v: float, i: float, phase: str = "", state: list = []):
         """Backward propagation of currents"""
-        _, ii = self._sys_vars()
+        _, ii, _ = self._sys_vars()
         # update input currents (per node)
         for n in self._topo_nodes[::-1]:
             p = self._parents[n]
             phase_config = self._phase_lkup[n]
-            if self._childs[n] == -1:  # leaf
-                if p == -1:  # root
-                    ii[n] = self._g[n]._solv_inp_curr(
-                        v[n],
-                        0.0,
-                        0.0,
-                        phase,
-                        phase_config,
-                    )
-                else:
-                    ii[n] = self._g[n]._solv_inp_curr(
-                        v[p[0]],
-                        0.0,
-                        0.0,
-                        phase,
-                        phase_config,
-                    )
+            vi, vo, io = 0.0, 0.0, 0.0
+            if p == -1:  # root
+                vi = v[n]
+                pstate = STATE_DEFAULT
             else:
-                isum = 0.0
+                vi = v[p[0]]
+                pstate = state[p[0]]
+            if self._childs[n] != -1:  # not leaf
+                vo = v[n]
+                # sum currents into childs
                 for c in self._childs[n]:
-                    isum += i[c]
-                if p == -1:  # root
-                    ii[n] = self._g[n]._solv_inp_curr(
-                        v[n],
-                        v[n],
-                        isum,
-                        phase,
-                        phase_config,
-                    )
-                else:
-                    ii[n] = self._g[n]._solv_inp_curr(
-                        v[p[0]],
-                        v[n],
-                        isum,
-                        phase,
-                        phase_config,
-                    )
+                    io += i[c]
+            ii[n] = self._g[n]._solv_inp_curr(vi, vo, io, phase, phase_config, pstate)
 
         return ii
 
@@ -638,11 +591,11 @@ class System:
 
     def _solve(self, vtol=1e-5, itol=1e-6, maxiter=10000, quiet=True, phase: str = ""):
         """Solver"""
-        v, i = self._sys_init(phase)
+        v, i, state = self._sys_init(phase)
         iters = 0
         while iters <= maxiter:
-            vi = self._fwd_prop(v, i, phase)
-            ii = self._back_prop(vi, i, phase)
+            vi, ostate = self._fwd_prop(v, i, phase, state)
+            ii = self._back_prop(vi, i, phase, state)
             iters += 1
             if np.allclose(np.array(v), np.array(vi), rtol=vtol) and np.allclose(
                 np.array(i), np.array(ii), rtol=itol
@@ -653,7 +606,7 @@ class System:
                         pname = "'{}': ".format(phase)
                     print("{}Tolerances met after {} iterations".format(pname, iters))
                 break
-            v, i = vi, ii
+            v, i, state = vi, ii, ostate
         return v, i, iters
 
     def _calc_energy(self, phase, pwr):

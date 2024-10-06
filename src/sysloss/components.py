@@ -73,6 +73,8 @@ LIMITS_DEFAULT = {
     "tr": [0.0, MAX_DEFAULT],  # temperature rise (°C)
     "tp": [-MAX_DEFAULT, MAX_DEFAULT],  # peak temperature (°C)
 }
+STATE_DEFAULT = {"off": False}
+STATE_OFF = {"off": True}
 
 
 def _get_opt(params, key, default):
@@ -109,6 +111,13 @@ def _get_eff(ipwr, opwr, def_eff=100.0):
     if ipwr > 0.0:
         return 100.0 * abs(opwr / ipwr)
     return def_eff
+
+
+def _calc_inp_current(vo, i, pstate):
+    """Calculate input current from vo and state vector"""
+    if abs(vo) == 0.0 or _get_opt(pstate, "off", False):
+        return 0.0
+    return i
 
 
 class _Interp0d:
@@ -257,26 +266,31 @@ class Source:
         return cls(name, vo=v, rs=r, limits=lim)
 
     def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
         return 0.0
 
     def _get_outp_voltage(self, phase, phase_conf={}):
+        """Get initial voltage value for solver"""
         return self._params["vo"]
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
-        if self._params["vo"] == 0.0:
-            return 0.0
-        return io
+        return _calc_inp_current(self._params["vo"], io, pstate)
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}):
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Calculate component output voltage from vi, ii and io"""
-        if self._params["vo"] == 0.0:
-            return 0.0
-        return self._params["vo"] - self._params["rs"] * io
+        if self._params["vo"] == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
+        vo = self._params["vo"] - self._params["rs"] * io
+        return vo, STATE_DEFAULT
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in component"""
-        if self._params["vo"] == 0.0:
+        if self._params["vo"] == 0.0 or _get_opt(pstate, "off", False):
             return 0.0, 0.0, 100.0, 0.0, 0.0
         ipwr = abs(self._params["vo"] * io)
         loss = self._params["rs"] * io * io
@@ -363,14 +377,20 @@ class PLoad:
         return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
         return 0.0
 
     def _get_outp_voltage(self, phase, phase_conf={}):
+        """Get initial voltage value for solver"""
         return 0.0
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
-        if vi == 0.0:
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
             return 0.0
         if not phase_conf:
             p = self._params["pwr"]
@@ -381,13 +401,15 @@ class PLoad:
 
         return p / abs(vi)
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}):
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Load output voltage is always 0"""
-        return 0.0
+        if _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
+        return 0.0, STATE_DEFAULT
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in component"""
-        if vi == 0.0:
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
             return 0.0, 0.0, 100.0, 0.0, 0.0
         tr = abs(vi * ii) * self._params["rt"]
         return abs(vi * ii), 0.0, 100.0, tr, tr + ta
@@ -466,10 +488,11 @@ class ILoad(PLoad):
         return cls(name, ii=i, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
         return self._params["ii"]
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
-        if vi == 0.0:
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
             return 0.0
         if not phase_conf:
             i = self._params["ii"]
@@ -550,7 +573,9 @@ class RLoad(PLoad):
         rt = _get_opt(config["rload"], "rt", RT_DEFAULT)
         return cls(name, rs=r, rt=rt, limits=lim)
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0
         r = self._params["rs"]
         if not phase_conf:
             pass
@@ -644,34 +669,38 @@ class RLoss:
         return cls(name, rs=r, limits=lim, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
         return 0.0
 
     def _get_outp_voltage(self, phase, phase_conf={}):
+        """Get initial voltage value for solver"""
         return 0.0
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
-        """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0:
-            return 0.0
-        return io
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}):
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
+        """Calculate component input current from vi, vo and io"""
+        return _calc_inp_current(vi, io, pstate)
+
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0:
-            return 0.0
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
         vo = vi - self._params["rs"] * io * np.sign(vi)
         if np.sign(vo) == np.sign(vi):
-            return vo
+            return vo, STATE_DEFAULT
         raise ValueError(
             "Unstable system: RLoss component '{}' has zero output voltage".format(
                 self._params["name"]
             )
         )
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in component"""
         vout = vi - self._params["rs"] * io * np.sign(vi)
-        if np.sign(vout) != np.sign(vi):
+        if np.sign(vout) != np.sign(vi) or _get_opt(pstate, "off", False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
@@ -794,34 +823,38 @@ class VLoss:
         return cls(name, vdrop=vd, rt=rt, limits=lim)
 
     def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
         return 0.0
 
     def _get_outp_voltage(self, phase, phase_conf={}):
+        """Get initial voltage value for solver"""
         return 0.0
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}):
-        """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0:
-            return 0.0
-        return io
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}):
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
+        """Calculate component input current from vi, vo and io"""
+        return _calc_inp_current(vi, io, pstate)
+
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0:
-            return 0.0
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
         vo = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
         if np.sign(vo) == np.sign(vi):
-            return vo
+            return vo, STATE_DEFAULT
         raise ValueError(
             "Unstable system: VLoss component '{}' has zero output voltage".format(
                 self._params["name"]
             )
         )
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in component"""
         vout = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
-        if np.sign(vout) != np.sign(vi):
+        if np.sign(vout) != np.sign(vi) or _get_opt(pstate, "off", False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
@@ -988,6 +1021,7 @@ class Converter:
         return cls(name, vo=v, eff=e, iq=iq, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
+        """Get initial current value for solver"""
         i = self._params["iq"]
         if not phase_conf:
             pass
@@ -996,6 +1030,7 @@ class Converter:
         return i
 
     def _get_outp_voltage(self, phase, phase_conf=[]):
+        """Get initial voltage value for solver"""
         v = self._params["vo"]
         if not phase_conf:
             pass
@@ -1003,9 +1038,17 @@ class Converter:
             v = 0.0
         return v
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[]):
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
         """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0 or self._params["vo"] == 0.0:
+        if (
+            abs(vi) == 0.0
+            or self._params["vo"] == 0.0
+            or _get_opt(pstate, "off", False)
+        ):
             return 0.0
         ve = vi * self._ipr._interp(abs(io), abs(vi))
         if not phase_conf:
@@ -1016,18 +1059,20 @@ class Converter:
             return self._params["iq"]
         return abs(self._params["vo"] * io / ve)
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[]):
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
         """Calculate component output voltage from vi, ii and io"""
         v = self._params["vo"]
-        if vi == 0.0:
-            v = 0.0
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
         if phase_conf:
             if phase not in phase_conf:
                 v = 0.0
-        return v
+        return v, STATE_DEFAULT
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
         """Calculate power and loss in component"""
+        if _get_opt(pstate, "off", False):
+            return 0.0, 0.0, 0.0, 0.0, 0.0
         if io == 0.0:
             loss = abs(self._params["iq"] * vi)
         else:
@@ -1099,7 +1144,7 @@ class LinReg:
 
     If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
 
-    The regualtor ground current can be either a constant (float) or interpolated.
+    The regulator ground current can be either a constant (float) or interpolated.
     Interpolation data dict for ground current can be either 1D (function of output current only):
 
     ``iq = {vi = [5.0], io = [0.0, 0.05, 0.1], iq = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
@@ -1206,6 +1251,7 @@ class LinReg:
         return cls(name, vo=v, vdrop=vd, iq=iq, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
+        """Get initial current value for solver"""
         i = self._ipr._interp(0.0, 0.0)
         if not phase_conf:
             pass
@@ -1214,6 +1260,7 @@ class LinReg:
         return i
 
     def _get_outp_voltage(self, phase, phase_conf=[]):
+        """Get initial voltage value for solver"""
         v = self._params["vo"]
         if not phase_conf:
             pass
@@ -1221,9 +1268,13 @@ class LinReg:
             v = 0.0
         return v
 
-    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[]):
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
         """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0:
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
             return 0.0
         i = io + self._ipr._interp(abs(io), abs(vi))
         if not phase_conf:
@@ -1232,21 +1283,25 @@ class LinReg:
             i = self._params["iis"]
         return i
 
-    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[]):
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
         """Calculate component output voltage from vi, ii and io"""
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
         v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
             v = 0.0
         if self._params["vo"] >= 0.0:
-            return v
-        return -v
+            return v, STATE_DEFAULT
+        return -v, STATE_DEFAULT
 
-    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
         """Calculate power and loss in component"""
+        if _get_opt(pstate, "off", False):
+            return 0.0, 0.0, 0.0, 0.0, 0.0
         v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
-        if vi == 0.0 or v == 0.0:
+        if abs(vi) == 0.0 or v == 0.0:
             loss = 0.0
         else:
             loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
