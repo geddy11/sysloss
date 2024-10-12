@@ -516,20 +516,20 @@ def test_converter(converter, name, vo, eff, iq, iis, rt, active_phases):
 
 
 @pytest.fixture()
-def linreg(name, vo, vdrop, iq, iis, rt, active_phases):
+def linreg(name, vo, vdrop, ig, iis, rt, active_phases):
     """Return a LinReg object."""
-    return LinReg(name, vo=vo, vdrop=vdrop, iq=iq, iis=iis, rt=rt)
+    return LinReg(name, vo=vo, vdrop=vdrop, ig=ig, iis=iis, rt=rt)
 
 
 @pytest.mark.parametrize(
-    "name, vo, vdrop, iq, iis, rt, active_phases",
+    "name, vo, vdrop, ig, iis, rt, active_phases",
     [
         ("No phase", 12.0, 1.2, 1e-5, 1e-6, 11.9, []),
         ("On-phase", -15, 0.88, 1.7e-4, 2e-5, 130.0, ["Apple", "Orange"]),
         ("Off-phase", 150, 0.67, 1e-3, 1.2e-4, 34.5, ["Pear"]),
     ],
 )
-def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
+def test_linreg(linreg, name, vo, vdrop, ig, iis, rt, active_phases):
     """Test LinReg object with different parameters"""
     assert linreg._params["name"] == name
 
@@ -540,9 +540,9 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
             if ict[0] == 0.0 or vo == 0.0 or s:
                 ii = 0.0
             elif active_phases == []:
-                ii = ict[2] + iq
+                ii = ict[2] + ig
             elif ict[3] in active_phases:
-                ii = ict[2] + iq
+                ii = ict[2] + ig
             elif ict[3] not in active_phases:
                 ii = iis
             assert close(
@@ -581,7 +581,7 @@ def test_linreg(linreg, name, vo, vdrop, iq, iis, rt, active_phases):
                 abs(linreg._params["vo"]),
                 max(abs(plt[0]) - linreg._params["vdrop"], 0.0),
             )
-            eloss = abs(iq * plt[0]) + (abs(plt[0]) - abs(v)) * plt[3]
+            eloss = abs(ig * plt[0]) + (abs(plt[0]) - abs(v)) * plt[3]
             if active_phases != []:
                 if plt[4] not in active_phases:
                     eloss = abs(iis * plt[0])

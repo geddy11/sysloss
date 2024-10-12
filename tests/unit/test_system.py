@@ -38,7 +38,7 @@ def test_case1():
     case1.add_comp("5V boost", comp=ILoad("Sensor", ii=15e-3))
     case1.add_comp(parent="5V boost", comp=RLoss("RC filter", rs=33.0))
     case1.add_comp(parent="RC filter", comp=VLoss("Diode", vdrop=0.17))
-    case1.add_comp("Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, iq=150e-6))
+    case1.add_comp("Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, ig=150e-6))
     case1.add_comp("LDO 2.5V", comp=PLoad("ADC", pwr=15e-3))
     case1.add_comp("5V boost", comp=RLoad("Res divider", rs=200e3))
     with pytest.raises(RuntimeError):
@@ -136,18 +136,18 @@ def test_case5():
 def test_case5b():
     """LinReg with interpolation parameter"""
     case5b = System("Case5b system", Source("5V system", vo=5.0))
-    iqdata = {"vi": [5.0], "io": [0.1, 0.4, 0.6, 0.5], "iq": [[0.3, 0.4, 0.67, 0.89]]}
+    igdata = {"vi": [5.0], "io": [0.1, 0.4, 0.6, 0.5], "ig": [[0.3, 0.4, 0.67, 0.89]]}
     with pytest.raises(ValueError):
-        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
-    iqdata = {
+        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
+    igdata = {
         "vi": [5.0],
         "io": [0.0, 0.4, 0.6, 0.8],
-        "iq": [[-0.3, -0.4, -0.67, -0.89]],
+        "ig": [[-0.3, -0.4, -0.67, -0.89]],
     }
     with pytest.raises(ValueError):
-        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
-    iqdata = {"vi": [5.0], "io": [0.0, 0.1, 0.2, 0.3], "iq": [[1e-6, 1e-3, 2e-3, 3e-3]]}
-    case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+        case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
+    igdata = {"vi": [5.0], "io": [0.0, 0.1, 0.2, 0.3], "ig": [[1e-6, 1e-3, 2e-3, 3e-3]]}
+    case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
     df = case5b.solve()
     rows = df.shape[0]
     assert np.allclose(
@@ -155,12 +155,12 @@ def test_case5b():
         1e-6,
         rtol=1e-6,
     ), "Case5b current"
-    iqdata = {
+    igdata = {
         "vi": [3.3, 5.0],
         "io": [0.0, 0.1, 0.2, 0.3],
-        "iq": [[1e-6, 1e-3, 2e-3, 3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
+        "ig": [[1e-6, 1e-3, 2e-3, 3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
     }
-    case5b.change_comp("LDO 3.3", comp=LinReg("LDO 3.3", vo=3.3, iq=iqdata))
+    case5b.change_comp("LDO 3.3", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
     df = case5b.solve()
     assert np.allclose(
         df[df["Component"] == "System total"]["Iout (A)"][rows - 1],
@@ -301,7 +301,7 @@ def test_case13():
         dff[dff["Component"] == "Subsystem 3.3V"]["Warnings"][5] == ""
     ), "Case 13 Subsystem 3.3V warnings"
     dfp = case13b.params()
-    assert dfp.shape[1] == 14, "Case13 parameter column count"
+    assert dfp.shape[1] == 15, "Case13 parameter column count"
     phases = {"sleep": 3600, "active": 127}
     case13b.set_sys_phases(phases)
     dfp = case13b.phases()
@@ -413,21 +413,21 @@ def test_case16():
     assert (
         type(case16.plot_interp("Diode 2")) == matplotlib.figure.Figure
     ), "Case16 Diode 2D figure"
-    iqdata = {
+    igdata = {
         "vi": [5.0],
         "io": [0.0, 0.01, 0.02, 0.1],
-        "iq": [[1e-6, 1e-3, 2e-3, 3e-3]],
+        "ig": [[1e-6, 1e-3, 2e-3, 3e-3]],
     }
-    case16.add_comp("12V", comp=LinReg("LinReg 1", vo=5.0, iq=iqdata))
+    case16.add_comp("12V", comp=LinReg("LinReg 1", vo=5.0, ig=igdata))
     assert (
         type(case16.plot_interp("LinReg 1")) == matplotlib.figure.Figure
     ), "Case16 LinReg 1D figure"
-    iqdata = {
+    igdata = {
         "vi": [2.5, 5.0],
         "io": [0.0, 0.01, 0.02, 0.1],
-        "iq": [[0.12e-6, 0.51e-3, 1.52e-3, 2.3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
+        "ig": [[0.12e-6, 0.51e-3, 1.52e-3, 2.3e-3], [1e-6, 1e-3, 2e-3, 3e-3]],
     }
-    case16.add_comp("12V", comp=LinReg("LinReg 2", vo=5.0, iq=iqdata))
+    case16.add_comp("12V", comp=LinReg("LinReg 2", vo=5.0, ig=igdata))
     assert (
         type(case16.plot_interp("LinReg 2", plot3d=True)) == matplotlib.figure.Figure
     ), "Case16 LinReg 2D figure"

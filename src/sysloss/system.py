@@ -150,6 +150,7 @@ class System:
                         cname = _get_mand(c["params"], "name")
                         limits = _get_opt(c, "limits", LIMITS_DEFAULT)
                         iq = _get_opt(c["params"], "iq", 0.0)
+                        ig = _get_opt(c["params"], "ig", 0.0)
                         iis = _get_opt(c["params"], "iis", 0.0)
                         if c["type"] == "CONVERTER":
                             vo = _get_mand(c["params"], "vo")
@@ -176,6 +177,7 @@ class System:
                                     vo=vo,
                                     vdrop=vdrop,
                                     iq=iq,
+                                    ig=ig,
                                     limits=limits,
                                     iis=iis,
                                 ),
@@ -912,7 +914,7 @@ class System:
 
         """
         self._rel_update()
-        names, typ, parent, vo, vdrop = [], [], [], [], []
+        names, typ, parent, vo, vdrop, ig = [], [], [], [], [], []
         iq, rs, rt, eff, ii, pwr, iis, lrt, ltp = [], [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         domain, dname = [], "none"
@@ -928,6 +930,7 @@ class System:
             pdict = {
                 "vo": "",
                 "vdrop": "",
+                "ig": "",
                 "iq": "",
                 "rs": "",
                 "rt": "",
@@ -940,6 +943,7 @@ class System:
             cparams = self._g[n]._get_params(pdict)
             vo += [cparams["vo"]]
             vdrop += [cparams["vdrop"]]
+            ig += [cparams["ig"]]
             iq += [cparams["iq"]]
             rs += [cparams["rs"]]
             rt += [cparams["rt"]]
@@ -971,6 +975,7 @@ class System:
         res["rs (Ohm)"] = rs
         res["rt (°C/W)"] = rt
         res["eff (%)"] = eff
+        res["ig (A)"] = ig
         res["iq (A)"] = iq
         res["ii (A)"] = ii
         res["iis (A)"] = iis

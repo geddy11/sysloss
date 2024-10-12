@@ -168,17 +168,32 @@ def test_converter():
 
 def test_linreg():
     """Check LinReg component"""
-    la = LinReg("LDO 1", vo=2.5, vdrop=0.3, iq=0.0)
+    la = LinReg(
+        "LDO 1",
+        vo=2.5,
+        vdrop=0.3,
+        ig={"vi": [5.0], "io": [0.0, 0.05, 0.1], "ig": [[2.0e-6, 0.5e-3, 0.85e-3]]},
+    )
     assert la._component_type == _ComponentTypes.LINREG, "LinReg component type"
     assert _ComponentTypes.SOURCE not in list(la._child_types), "LinReg child types"
     with pytest.raises(ValueError):
         lb = LinReg("LDO 2", vo=1.8, vdrop=2.0)
     with pytest.raises(KeyError):
         lb = LinReg.from_file("LDO 1", fname="tests/data/linreg_bad.toml")
-    lb = LinReg.from_file("LDO 1", fname="tests/data/linreg.toml")
+    with pytest.deprecated_call():
+        lb = LinReg.from_file("LDO 1", fname="tests/data/linreg.toml")
     assert la._params == lb._params, "LinReg parameters from file"
     assert la._limits == lb._limits, "LinReg limits from file"
     assert isinstance(la, _ComponentInterface), "instance LinReg"
+    lb2 = LinReg.from_file("LDO 1", fname="tests/data/linreg_new.toml")
+    assert la._params == lb2._params, "LinReg parameters from new file"
+    with pytest.deprecated_call():
+        lc = LinReg(
+            "LDO 3",
+            vo=14.7,
+            vdrop=0.3,
+            iq={"vi": [5.0], "io": [0.0, 0.05, 0.1], "iq": [[2.0e-6, 0.5e-3, 0.85e-3]]},
+        )
 
 
 def test_interpolators():

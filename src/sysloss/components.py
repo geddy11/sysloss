@@ -40,6 +40,7 @@ from enum import Enum, unique
 import toml
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator
+from warnings import warn
 
 __all__ = ["Source", "ILoad", "PLoad", "RLoad", "RLoss", "VLoss", "Converter", "LinReg"]
 
@@ -1145,14 +1146,14 @@ class LinReg:
 
     If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
 
-    The regulator ground current (iq) can be either a constant (float) or interpolated.
+    The regulator ground current (ig) can be either a constant (float) or interpolated.
     Interpolation data dict for ground current can be either 1D (function of output current only):
 
-    ``iq = {vi = [5.0], io = [0.0, 0.05, 0.1], iq = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
+    ``ig = {vi = [5.0], io = [0.0, 0.05, 0.1], ig = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
 
     Or 2D (function of input voltage and output current):
 
-    ``iq = {vi = [2.5, 5.0], io = [0.0, 0.05, 0.1], iq = [[1.2e-6, 0.34e-3, 0.64e-3], [2.0e-6, 0.5e-3, 0.85e-3]]}``
+    ``ig = {vi = [2.5, 5.0], io = [0.0, 0.05, 0.1], ig = [[1.2e-6, 0.34e-3, 0.64e-3], [2.0e-6, 0.5e-3, 0.85e-3]]}``
 
     Parameters
     ----------
@@ -1163,6 +1164,8 @@ class LinReg:
     vdrop : float, optional
         Dropout voltage (V), by default 0.0.
     iq : float | dict, optional
+        Ground current (A), by default 0.0. iq is deprecated and will be removed in a future version, use ig instead.
+    ig : float | dict, optional
         Ground current (A), by default 0.0.
     limits : dict, optional
         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
@@ -1197,6 +1200,7 @@ class LinReg:
         vo: float,
         vdrop: float = 0.0,
         iq: float = 0.0,
+        ig: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
         iis: float = 0.0,
         rt: float = 0.0,
@@ -1207,24 +1211,35 @@ class LinReg:
         if not (abs(vdrop) < abs(vo)):
             raise ValueError("Voltage drop must be < vo")
         self._params["vdrop"] = abs(vdrop)
-        if isinstance(iq, dict):
-            if not np.all(np.diff(iq["io"]) > 0):
-                raise ValueError("iq values must be monotonic increasing")
-            if np.min(iq["iq"]) < 0.0:
-                raise ValueError("iq values must be >= 0.0")
-            if len(iq["vi"]) == 1:
-                self._ipr = _Interp1d(iq["io"], iq["iq"][0])
+        if iq != 0.0:
+            warn(
+                "The iq parameter is deprecated, and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            igc = iq
+            if isinstance(igc, dict):
+                igc["ig"] = igc.pop("iq")
+        else:
+            igc = ig
+        if isinstance(igc, dict):
+            if not np.all(np.diff(igc["io"]) > 0):
+                raise ValueError("ig values must be monotonic increasing")
+            if np.min(igc["ig"]) < 0.0:
+                raise ValueError("ig values must be >= 0.0")
+            if len(igc["vi"]) == 1:
+                self._ipr = _Interp1d(igc["io"], igc["ig"][0])
             else:
                 cur = []
                 volt = []
-                for v in iq["vi"]:
-                    cur += iq["io"]
-                    volt += len(iq["io"]) * [v]
-                    igi = np.asarray(iq["iq"]).reshape(1, -1)[0].tolist()
+                for v in igc["vi"]:
+                    cur += igc["io"]
+                    volt += len(igc["io"]) * [v]
+                    igi = np.asarray(igc["ig"]).reshape(1, -1)[0].tolist()
                 self._ipr = _Interp2d(cur, volt, igi)
         else:
-            self._ipr = _Interp0d(abs(iq))
-        self._params["iq"] = iq
+            self._ipr = _Interp0d(abs(igc))
+        self._params["ig"] = igc
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
         self._limits = limits
@@ -1245,11 +1260,22 @@ class LinReg:
 
         v = _get_mand(config["linreg"], "vo")
         vd = _get_opt(config["linreg"], "vdrop", VDROP_DEFAULT)
-        iq = _get_opt(config["linreg"], "iq", IG_DEFAULT)
+        iq = _get_opt(config["linreg"], "iq", IQ_DEFAULT)
+        if iq != 0.0:
+            warn(
+                "The iq parameter is deprecated, and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            ig = iq
+            if isinstance(ig, dict):
+                ig["ig"] = ig.pop("iq")
+        else:
+            ig = _get_opt(config["linreg"], "ig", IG_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["linreg"], "iis", IIS_DEFAULT)
         rt = _get_opt(config["linreg"], "rt", RT_DEFAULT)
-        return cls(name, vo=v, vdrop=vd, iq=iq, limits=lim, iis=iis, rt=rt)
+        return cls(name, vo=v, vdrop=vd, ig=ig, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
         """Get initial current value for solver"""
@@ -1365,9 +1391,9 @@ class LinReg:
         ret["vo"] = self._params["vo"]
         ret["vdrop"] = self._params["vdrop"]
         if isinstance(self._ipr, _Interp0d):
-            ret["iq"] = abs(self._params["iq"])
+            ret["ig"] = abs(self._params["ig"])
         else:
-            ret["iq"] = "interp"
+            ret["ig"] = "interp"
         ret["iis"] = self._params["iis"]
         ret["rt"] = self._params["rt"]
         return ret

@@ -30,7 +30,8 @@ from sysloss.components import *
 
 def test_case1():
     """Check system saved to json v1 format"""
-    case1 = System.from_file("tests/data/System v1.0.0.json")
+    with pytest.deprecated_call():
+        case1 = System.from_file("tests/data/System v1.0.0.json")
     df = case1.solve()
     rows = df.shape[0]
     assert np.allclose(
