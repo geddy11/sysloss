@@ -744,11 +744,11 @@ class VLoss:
     The voltage drop can be either a constant (float) or interpolated.
     Interpolation data dict for voltage drop can be either 1D (function of output current only):
 
-    ``vdrop= {vi = [2.5], io = [0.1, 0.5, 0.9], vdrop = [[0.23, 0.41, 0.477]]}``
+    ``vdrop= {"vi":[2.5], "io":[0.1, 0.5, 0.9], "vdrop":[[0.23, 0.41, 0.477]]}``
 
     Or 2D (function of input voltage and output current):
 
-    ``vdrop = {vi = [2.5, 5.0, 12.0], io = [0.1, 0.5, 0.9], vdrop = [[0.23, 0.34, 0.477], [0.27, 0.39, 0.51], [0.3, 0.41, 0.57]]}``
+    ``vdrop = {"vi":[2.5, 5.0, 12.0], "io":[0.1, 0.5, 0.9], "vdrop":[[0.23, 0.34, 0.477], [0.27, 0.39, 0.51], [0.3, 0.41, 0.57]]}``
 
     Parameters
     ----------
@@ -914,11 +914,11 @@ class Converter:
     The converter efficiency can be either a constant (float) or interpolated.
     Interpolation data dict for efficiency can be either 1D (function of output current only):
 
-    ``eff = {vi = [3.3], io = [0.1, 0.5, 0.9], eff = [[0.55, 0.78, 0.92]]}``
+    ``eff = {"vi":[3.3], "io":[0.1, 0.5, 0.9], "eff":[[0.55, 0.78, 0.92]]}``
 
     Or 2D (function of input voltage and output current):
 
-    ``eff = {vi = [3.3, 5.0, 12.0], io = [0.1, 0.5, 0.9], eff = [[0.55, 0.78, 0.92], [0.5, 0.74, 0.83], [0.4, 0.6, 0.766]]}``
+    ``eff = {"vi":[3.3, 5.0, 12.0], "io":[0.1, 0.5, 0.9], "eff":[[0.55, 0.78, 0.92], [0.5, 0.74, 0.83], [0.4, 0.6, 0.766]]}``
 
     Parameters
     ----------
@@ -1149,11 +1149,11 @@ class LinReg:
     The regulator ground current (ig) can be either a constant (float) or interpolated.
     Interpolation data dict for ground current can be either 1D (function of output current only):
 
-    ``ig = {vi = [5.0], io = [0.0, 0.05, 0.1], ig = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
+    ``ig = {"vi":[5.0], "io":[0.0, 0.05, 0.1], "ig":[[2.0e-6, 0.5e-3, 0.85e-3]]}``
 
     Or 2D (function of input voltage and output current):
 
-    ``ig = {vi = [2.5, 5.0], io = [0.0, 0.05, 0.1], ig = [[1.2e-6, 0.34e-3, 0.64e-3], [2.0e-6, 0.5e-3, 0.85e-3]]}``
+    ``ig = {"vi":[2.5, 5.0], "io":[0.0, 0.05, 0.1], "ig":[[1.2e-6, 0.34e-3, 0.64e-3], [2.0e-6, 0.5e-3, 0.85e-3]]}``
 
     Parameters
     ----------
