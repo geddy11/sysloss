@@ -27,6 +27,7 @@ rich = ">=12.0"
 toml = ">=0.10.2"
 matplotlib = "^3.0"
 tqdm = ">=4.63"
+packaging = ">=21.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.0"
@@ -36,6 +37,7 @@ jupyter-book = "^1.0.0"
 toml = ">=0.10.2"
 pandas = "^2.0"
 tqdm = ">=4.63"
+packaging = ">=21.1"
 
 [tool.poetry.group.docs]
 optional = true
@@ -48,6 +50,7 @@ rich = ">=12.0"
 toml = ">=0.10.2"
 matplotlib = "^3.0"
 tqdm = ">=4.63"
+packaging = ">=21.1"
 
 [tool.semantic_release]
 allow_zero_version = false

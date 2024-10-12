@@ -35,6 +35,7 @@ from matplotlib.ticker import LinearLocator
 from scipy.interpolate import LinearNDInterpolator
 from typing import Callable
 import warnings
+from packaging import version
 from tqdm import TqdmExperimentalWarning
 
 warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
@@ -109,6 +110,11 @@ class System:
         System
             A new `System` instance.
 
+        Raises
+        ------
+        ValueError
+            If file was created by a newer version of sysLoss.
+
         Examples
         --------
         >>> sys = System.from_file("my_system.json")
@@ -121,6 +127,13 @@ class System:
         sysparams = _get_mand(sys, "system")
         sysname = _get_mand(sysparams, "name")
         ver = _get_mand(sysparams, "version")
+        # check version compatability
+        if version.parse(sysloss.__version__) < version.parse(ver):
+            raise ValueError(
+                '"{}" was created by sysLoss version {} - please update sysLoss to load this file'.format(
+                    fname, ver
+                )
+            )
         # add sources
         for e in range(1, len(entires)):
             vo = _get_mand(sys[entires[e]]["params"], "vo")
@@ -135,14 +148,12 @@ class System:
                 for p in list(sys[entires[e]]["childs"].keys()):
                     for c in sys[entires[e]]["childs"][p]:
                         cname = _get_mand(c["params"], "name")
-                        # print("  " + cname)
                         limits = _get_opt(c, "limits", LIMITS_DEFAULT)
                         iq = _get_opt(c["params"], "iq", 0.0)
                         iis = _get_opt(c["params"], "iis", 0.0)
                         if c["type"] == "CONVERTER":
                             vo = _get_mand(c["params"], "vo")
                             eff = _get_mand(c["params"], "eff")
-                            # af = _get_opt(c["params"], "active_phases", [])
                             self.add_comp(
                                 p,
                                 comp=Converter(
@@ -152,7 +163,6 @@ class System:
                                     iq=iq,
                                     limits=limits,
                                     iis=iis,
-                                    # active_phases=af,
                                 ),
                             )
                         elif c["type"] == "LINREG":
@@ -168,7 +178,6 @@ class System:
                                     iq=iq,
                                     limits=limits,
                                     iis=iis,
-                                    # active_phases=af,
                                 ),
                             )
                         elif c["type"] == "SLOSS":

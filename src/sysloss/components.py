@@ -57,6 +57,7 @@ class _ComponentTypes(Enum):
 
 MAX_DEFAULT = 1.0e6
 IQ_DEFAULT = 0.0
+IG_DEFAULT = 0.0
 IIS_DEFAULT = 0.0
 RS_DEFAULT = 0.0
 RT_DEFAULT = 0.0
@@ -1144,7 +1145,7 @@ class LinReg:
 
     If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
 
-    The regulator ground current can be either a constant (float) or interpolated.
+    The regulator ground current (iq) can be either a constant (float) or interpolated.
     Interpolation data dict for ground current can be either 1D (function of output current only):
 
     ``iq = {vi = [5.0], io = [0.0, 0.05, 0.1], iq = [[2.0e-6, 0.5e-3, 0.85e-3]]}``
@@ -1219,8 +1220,8 @@ class LinReg:
                 for v in iq["vi"]:
                     cur += iq["io"]
                     volt += len(iq["io"]) * [v]
-                    iqi = np.asarray(iq["iq"]).reshape(1, -1)[0].tolist()
-                self._ipr = _Interp2d(cur, volt, iqi)
+                    igi = np.asarray(iq["iq"]).reshape(1, -1)[0].tolist()
+                self._ipr = _Interp2d(cur, volt, igi)
         else:
             self._ipr = _Interp0d(abs(iq))
         self._params["iq"] = iq
@@ -1244,7 +1245,7 @@ class LinReg:
 
         v = _get_mand(config["linreg"], "vo")
         vd = _get_opt(config["linreg"], "vdrop", VDROP_DEFAULT)
-        iq = _get_opt(config["linreg"], "iq", IQ_DEFAULT)
+        iq = _get_opt(config["linreg"], "iq", IG_DEFAULT)
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["linreg"], "iis", IIS_DEFAULT)
         rt = _get_opt(config["linreg"], "rt", RT_DEFAULT)
