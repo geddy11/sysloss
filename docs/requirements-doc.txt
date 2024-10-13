@@ -3,4 +3,6 @@ matplotlib
 pandas
 numpy
 toml
-runsworkx
+tqdm
+rustworkx
+packaging
