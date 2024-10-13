@@ -909,6 +909,7 @@ class System:
         names, typ, parent, vo, vdrop, ig = [], [], [], [], [], []
         iq, rs, rt, eff, ii, pwr, iis, ltr, ltp = [], [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
+        lvd = []
         domain, dname = [], "none"
         src_cnt = 0
 
@@ -951,6 +952,7 @@ class System:
                 lio += [self._filt_lim(n, "io")]
                 lvi += [self._filt_lim(n, "vi")]
                 lvo += [self._filt_lim(n, "vo")]
+                lvd += [self._filt_lim(n, "vd")]
                 lpi += [self._filt_lim(n, "pi")]
                 lpo += [self._filt_lim(n, "po")]
                 lpl += [self._filt_lim(n, "pl")]
@@ -978,6 +980,7 @@ class System:
         if limits:
             res["vi limit (V)"] = lvi
             res["vo limit (V)"] = lvo
+            res["vd limit (V)"] = lvd
             res["ii limit (A)"] = lii
             res["io limit (A)"] = lio
             res["pi limit (W)"] = lpi

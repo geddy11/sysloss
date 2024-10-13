@@ -27,6 +27,7 @@ Constants
 LIMITS_DEFAULT = {
     | "vi": [0.0, 1.0e6], # input voltage (V)
     | "vo": [0.0, 1.0e6], # output voltage (V)
+    | "vd": [0.0, 1.0e6], # voltage difference, vi-vo (V)
     | "ii": [0.0, 1.0e6], # input current (A)
     | "io": [0.0, 1.0e6], # output current (A)
     | "pi": [0.0, 1.0e6], # input power (W)
@@ -67,6 +68,7 @@ PWRS_DEFAULT = 0.0
 LIMITS_DEFAULT = {
     "vi": [0.0, MAX_DEFAULT],  # input voltage (V)
     "vo": [0.0, MAX_DEFAULT],  # output voltage (V)
+    "vd": [0.0, MAX_DEFAULT],  # voltage difference, vi-vo (V)
     "ii": [0.0, MAX_DEFAULT],  # input current (A)
     "io": [0.0, MAX_DEFAULT],  # output current (A)
     "pi": [0.0, MAX_DEFAULT],  # input power (W)
@@ -620,7 +622,7 @@ class RLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
 
     """
 
@@ -719,6 +721,7 @@ class RLoss:
             {
                 "vi": vi,
                 "vo": vo,
+                "vd": abs(vi - vo),
                 "ii": ii,
                 "io": io,
                 "pi": abs(vi * ii),
@@ -759,7 +762,7 @@ class VLoss:
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
-         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
+         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
 
     """
 
@@ -873,6 +876,7 @@ class VLoss:
             {
                 "vi": vi,
                 "vo": vo,
+                "vd": abs(vi - vo),
                 "ii": ii,
                 "io": io,
                 "pi": abs(vi * ii),
@@ -1168,7 +1172,7 @@ class LinReg:
     ig : float | dict, optional
         Ground current (A), by default 0.0.
     limits : dict, optional
-        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, ii, io, pi, po, pl, tr, tp
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
     iis : float, optional
         Sleep (shut-down) current (A), by default 0.0.
     rt : float, optional
@@ -1357,6 +1361,7 @@ class LinReg:
             {
                 "vi": vi,
                 "vo": vo,
+                "vd": abs(vi - vo),
                 "ii": ii,
                 "io": io,
                 "pi": pi,
