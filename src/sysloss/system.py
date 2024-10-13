@@ -894,28 +894,20 @@ class System:
         dff = pd.concat(frames, ignore_index=True)
         return dff.replace(np.nan, "")
 
-    def params(self, limits: bool = False) -> pd.DataFrame:
-        """Return component parameters.
+    def _filt_lim(self, node: int, key: str) -> list:
+        """Filter out default limit values"""
+        limits = _get_opt(self._g[node]._limits, key, "")
+        if limits == LIMITS_DEFAULT[key]:
+            return ""
+        return limits
 
-        Parameters
-        ----------
-        limits : bool, optional
-            Include limits., by default False
-
-        Returns
-        -------
-        pd.DataFrame
-            System parameters.
-
-        Examples
-        --------
-        >>> sys.params()
-        >>> sys.params(limits=True)
-
-        """
+    def _pars_and_limits(
+        self, params: bool = True, limits: bool = False
+    ) -> pd.DataFrame:
+        """Return component parameters and limits"""
         self._rel_update()
         names, typ, parent, vo, vdrop, ig = [], [], [], [], [], []
-        iq, rs, rt, eff, ii, pwr, iis, lrt, ltp = [], [], [], [], [], [], [], [], []
+        iq, rs, rt, eff, ii, pwr, iis, ltr, ltp = [], [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         domain, dname = [], "none"
         src_cnt = 0
@@ -927,42 +919,43 @@ class System:
                 dname = self._g[n]._params["name"]
                 src_cnt += 1
             domain += [dname]
-            pdict = {
-                "vo": "",
-                "vdrop": "",
-                "ig": "",
-                "iq": "",
-                "rs": "",
-                "rt": "",
-                "eff": "",
-                "ii": "",
-                "pwr": "",
-                "iis": "",
-                "pwrs": "",
-            }
-            cparams = self._g[n]._get_params(pdict)
-            vo += [cparams["vo"]]
-            vdrop += [cparams["vdrop"]]
-            ig += [cparams["ig"]]
-            iq += [cparams["iq"]]
-            rs += [cparams["rs"]]
-            rt += [cparams["rt"]]
-            eff += [cparams["eff"]]
-            ii += [cparams["ii"]]
-            pwr += [cparams["pwr"]]
-            iis += [cparams["iis"]]
-            pwrs += [cparams["pwrs"]]
             parent += [self._get_parent_name(n)]
+            if params:
+                pdict = {
+                    "vo": "",
+                    "vdrop": "",
+                    "ig": "",
+                    "iq": "",
+                    "rs": "",
+                    "rt": "",
+                    "eff": "",
+                    "ii": "",
+                    "pwr": "",
+                    "iis": "",
+                    "pwrs": "",
+                }
+                cparams = self._g[n]._get_params(pdict)
+                vo += [cparams["vo"]]
+                vdrop += [cparams["vdrop"]]
+                ig += [cparams["ig"]]
+                iq += [cparams["iq"]]
+                rs += [cparams["rs"]]
+                rt += [cparams["rt"]]
+                eff += [cparams["eff"]]
+                ii += [cparams["ii"]]
+                pwr += [cparams["pwr"]]
+                iis += [cparams["iis"]]
+                pwrs += [cparams["pwrs"]]
             if limits:
-                lii += [_get_opt(self._g[n]._limits, "ii", LIMITS_DEFAULT["ii"])]
-                lio += [_get_opt(self._g[n]._limits, "io", LIMITS_DEFAULT["io"])]
-                lvi += [_get_opt(self._g[n]._limits, "vi", LIMITS_DEFAULT["vi"])]
-                lvo += [_get_opt(self._g[n]._limits, "vo", LIMITS_DEFAULT["vo"])]
-                lpi += [_get_opt(self._g[n]._limits, "pi", LIMITS_DEFAULT["pi"])]
-                lpo += [_get_opt(self._g[n]._limits, "po", LIMITS_DEFAULT["po"])]
-                lpl += [_get_opt(self._g[n]._limits, "pl", LIMITS_DEFAULT["pl"])]
-                lrt += [_get_opt(self._g[n]._limits, "tr", LIMITS_DEFAULT["tr"])]
-                ltp += [_get_opt(self._g[n]._limits, "tp", LIMITS_DEFAULT["tp"])]
+                lii += [self._filt_lim(n, "ii")]
+                lio += [self._filt_lim(n, "io")]
+                lvi += [self._filt_lim(n, "vi")]
+                lvo += [self._filt_lim(n, "vo")]
+                lpi += [self._filt_lim(n, "pi")]
+                lpo += [self._filt_lim(n, "po")]
+                lpl += [self._filt_lim(n, "pl")]
+                ltr += [self._filt_lim(n, "tr")]
+                ltp += [self._filt_lim(n, "tp")]
         # report
         res = {}
         res["Component"] = names
@@ -970,17 +963,18 @@ class System:
         res["Parent"] = parent
         if src_cnt > 1:
             res["Domain"] = domain
-        res["vo (V)"] = vo
-        res["vdrop (V)"] = vdrop
-        res["rs (Ohm)"] = rs
-        res["rt (°C/W)"] = rt
-        res["eff (%)"] = eff
-        res["ig (A)"] = ig
-        res["iq (A)"] = iq
-        res["ii (A)"] = ii
-        res["iis (A)"] = iis
-        res["pwr (W)"] = pwr
-        res["pwrs (W)"] = pwrs
+        if params:
+            res["vo (V)"] = vo
+            res["vdrop (V)"] = vdrop
+            res["rs (Ohm)"] = rs
+            res["rt (°C/W)"] = rt
+            res["eff (%)"] = eff
+            res["ig (A)"] = ig
+            res["iq (A)"] = iq
+            res["ii (A)"] = ii
+            res["iis (A)"] = iis
+            res["pwr (W)"] = pwr
+            res["pwrs (W)"] = pwrs
         if limits:
             res["vi limit (V)"] = lvi
             res["vo limit (V)"] = lvo
@@ -989,10 +983,47 @@ class System:
             res["pi limit (W)"] = lpi
             res["po limit (W)"] = lpo
             res["pl limit (W)"] = lpl
-            res["tr limit (°C)"] = lrt
+            res["tr limit (°C)"] = ltr
             res["tp limit (°C)"] = ltp
-
         return pd.DataFrame(res)
+
+    def params(self, limits: bool = False) -> pd.DataFrame:
+        """Return component parameters.
+
+        Parameters
+        ----------
+        limits : bool, optional
+            Include limits., by default False
+
+        Returns
+        -------
+        pd.DataFrame
+            System component parameters.
+
+        Examples
+        --------
+        >>> sys.params()
+        >>> sys.params(limits=True)
+
+        """
+        return self._pars_and_limits(params=True, limits=limits)
+
+    def limits(self) -> pd.DataFrame:
+        """Return component limits.
+
+        A blank cell in the returned Pandas dataframe indicates that default limits apply.
+
+        Returns
+        -------
+        pd.DataFrame
+            System component limits.
+
+        Examples
+        --------
+        >>> sys.limits()
+
+        """
+        return self._pars_and_limits(params=False, limits=True)
 
     def set_sys_phases(self, phases: dict):
         """Define system level load phases.

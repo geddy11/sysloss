@@ -27,6 +27,7 @@ import rich
 import matplotlib
 from sysloss.system import System
 from sysloss.components import *
+from sysloss.components import LIMITS_DEFAULT
 
 
 def test_case1():
@@ -36,7 +37,9 @@ def test_case1():
     case1.add_comp("1.8V buck", comp=PLoad("MCU", pwr=27e-3))
     case1.add_comp("3V coin", comp=Converter("5V boost", vo=5, eff=0.91, iq=42e-6))
     case1.add_comp("5V boost", comp=ILoad("Sensor", ii=15e-3))
-    case1.add_comp(parent="5V boost", comp=RLoss("RC filter", rs=33.0))
+    case1.add_comp(
+        parent="5V boost", comp=RLoss("RC filter", rs=33.0, limits={"io": [0.0, 1.0]})
+    )
     case1.add_comp(parent="RC filter", comp=VLoss("Diode", vdrop=0.17))
     case1.add_comp("Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, ig=150e-6))
     case1.add_comp("LDO 2.5V", comp=PLoad("ADC", pwr=15e-3))
@@ -73,6 +76,8 @@ def test_case1():
     assert (
         dfp[dfp.Component == "1.8V buck"]["eff (%)"].tolist()[0] == "interp"
     ), "Case parameters interpolator"
+    dfl = case1.limits()
+    assert dfl.shape[1] == 3 + len(LIMITS_DEFAULT), "Case 1 limits column count"
 
     # reload system from json
     case1b = System.from_file("tests/unit/case1.json")
