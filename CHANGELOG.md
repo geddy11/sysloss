@@ -1,12 +1,42 @@
 # CHANGELOG
 
+
+## v1.5.0 (2024-10-14)
+
+### Documentation
+
+* docs: update LinReg parameters in component files notebook ([`e65d5a9`](https://github.com/geddy11/sysloss/commit/e65d5a9ae7c4be045e5c1969371aa371f0c57610))
+
+* docs: fix component parameter interpolation data dict examples in API ([`a0b9ed7`](https://github.com/geddy11/sysloss/commit/a0b9ed7e5be79a5095cfc2dd6af8102c13436d83))
+
+* docs: add limit definitions to component parameter files notebook. ([`9110379`](https://github.com/geddy11/sysloss/commit/91103796d71a9774dec148ad4fe32d99b330d224))
+
+### Features
+
+* feat: add power switch (PSwitch) component ([`8880ec1`](https://github.com/geddy11/sysloss/commit/8880ec1b46d0729f2dc92f816832afb0e236909a))
+
+* feat: new limit added: vd (voltage difference) ([`7e599b1`](https://github.com/geddy11/sysloss/commit/7e599b1778e52e5f047d4df1b7424631256db73c))
+
+* feat: add method .limits() to system, which returns all user defined component limits ([`3dc8bf9`](https://github.com/geddy11/sysloss/commit/3dc8bf9aaa8550bfd2263692bf559b2873f2fe0e))
+
+### Refactoring
+
+* refactor: deprecate LinReg iq parameter, replace with ig ([`9183e37`](https://github.com/geddy11/sysloss/commit/9183e378dd1aef08a46ddd916ab7521339eb9214))
+
+* refactor: add checking of sysLoss version when loading System from file ([`29eb5a4`](https://github.com/geddy11/sysloss/commit/29eb5a458d990a86eb629bd3cd5ba096333de296))
+
+* refactor: set state to off when phase in not active ([`bee1610`](https://github.com/geddy11/sysloss/commit/bee161044b916ac0aa22ab4b3665f4ebee2d38eb))
+
+* refactor: add state vector to solver parameters ([`f290f6d`](https://github.com/geddy11/sysloss/commit/f290f6d84251459a4434a227937e1a92b6df3485))
+
+
 ## v1.4.0 (2024-09-02)
 
-### Build
+### Build System
 
 * build: fix CITATION.cff version update variable ([`298ea1c`](https://github.com/geddy11/sysloss/commit/298ea1cff2f758d6e1590ea1cb7fe73991082003))
 
-### Ci
+### Continuous Integration
 
 * ci: switch to codacy github action ([`a5b758c`](https://github.com/geddy11/sysloss/commit/a5b758cdbf026d0416161930281c5588c7c81b4a))
 
@@ -28,13 +58,13 @@
 
 * docs: update security.md ([`c3522d9`](https://github.com/geddy11/sysloss/commit/c3522d9bd840ff5238d19b7670d8cd7fdec2d908))
 
-### Feature
+### Features
 
 * feat: add ambient temperature (ta) as new parameter to .solve() and peak temperature (tp) as a new limit
 
 If thermal resistance is specified on a component, peak temperature shows up as a new column in the results table. Peak temperature is calculated as ambient temperature plus temperature rise. ([`2e74afe`](https://github.com/geddy11/sysloss/commit/2e74afe4eeca521a4f6f95e488b7ea9321eb4ca2))
 
-### Fix
+### Fixes
 
 * fix(system): add check of component name and set default load phase in change_comp() ([`1a06e47`](https://github.com/geddy11/sysloss/commit/1a06e47ad14e694451f97f6b84f6587c319c0e38))
 
@@ -42,15 +72,16 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * Create SECURITY.md ([`94145e2`](https://github.com/geddy11/sysloss/commit/94145e24eeacc918f0582f78e68eab6384fde62e))
 
-* Merge branch &#39;main&#39; of https://github.com/geddy11/sysloss ([`26227ac`](https://github.com/geddy11/sysloss/commit/26227acab51e7e1ff459fe512319293974198d4d))
+* Merge branch 'main' of https://github.com/geddy11/sysloss ([`26227ac`](https://github.com/geddy11/sysloss/commit/26227acab51e7e1ff459fe512319293974198d4d))
+
 
 ## v1.3.0 (2024-06-19)
 
-### Build
+### Build System
 
 * build: add PyPI classifiers ([`f8a0a9f`](https://github.com/geddy11/sysloss/commit/f8a0a9f26fc693f615a8218eb28939d516fac3c3))
 
-### Ci
+### Continuous Integration
 
 * ci: remove unused jobs in pipeline ([`4849845`](https://github.com/geddy11/sysloss/commit/48498455837e54bee43815c86cc31fd8a55f31de))
 
@@ -62,33 +93,34 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * docs: add ROV battery pack tutorial ([`61afdba`](https://github.com/geddy11/sysloss/commit/61afdba5a2504ce609cc43737a80183a2251ca0f))
 
-### Feature
+### Features
 
 * feat: add thermal resistance parameter and temperature rise calculation ([`b8481a2`](https://github.com/geddy11/sysloss/commit/b8481a263065387e7cf600cda000be78cb307e0b))
 
 * feat: add tags argument to .batt_life() ([`495eea5`](https://github.com/geddy11/sysloss/commit/495eea53bdd45af605080e59814dab2828c91f38))
 
+
 ## v1.2.0 (2024-05-27)
 
-### Ci
+### Continuous Integration
 
 * ci: fix maintainer in conda receipe ([`1d27b0c`](https://github.com/geddy11/sysloss/commit/1d27b0c9c4f4411cf71c6efd29ffcecb38139e7c))
 
 ### Documentation
 
-* docs: correct toml interpolation data format in &#34;Component parameter files&#34; page ([`9275463`](https://github.com/geddy11/sysloss/commit/92754635952bcecb1da80cc7739135b7aad43d64))
+* docs: correct toml interpolation data format in "Component parameter files" page ([`9275463`](https://github.com/geddy11/sysloss/commit/92754635952bcecb1da80cc7739135b7aad43d64))
 
-### Feature
+### Features
 
 * feat: add power limits to all components (pi, po, pl) ([`ce36738`](https://github.com/geddy11/sysloss/commit/ce367382eda204f0a8961d65e2e13a173d34c83d))
 
 * feat(components): add interpolation option to LinReg ground current parameter ([`2393767`](https://github.com/geddy11/sysloss/commit/23937677641ce6d99bbdb065b43a50a88a0a7a62))
 
-### Fix
+### Fixes
 
 * fix(system): add correct title to LinReg interpolation data plots ([`8ade81d`](https://github.com/geddy11/sysloss/commit/8ade81ddf9ef29387db89157b6da3feb850c5514))
 
-### Refactor
+### Refactoring
 
 * refactor: system .params() method now gets component parameters from ._get_params() method ([`320fc09`](https://github.com/geddy11/sysloss/commit/320fc09d3ac5cd8a86f207ada78ddb73269dfa43))
 
@@ -96,11 +128,12 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 ### Unknown
 
-* Merge branch &#39;main&#39; of https://github.com/geddy11/sysloss ([`ebce939`](https://github.com/geddy11/sysloss/commit/ebce93933ba42a73949a877dff8415091ce5490a))
+* Merge branch 'main' of https://github.com/geddy11/sysloss ([`ebce939`](https://github.com/geddy11/sysloss/commit/ebce93933ba42a73949a877dff8415091ce5490a))
+
 
 ## v1.1.1 (2024-05-22)
 
-### Build
+### Build System
 
 * build: relax package dependencies ([`33eb1b1`](https://github.com/geddy11/sysloss/commit/33eb1b1dbdd03d84c6ca241c313787c0f5828ebc))
 
@@ -114,7 +147,7 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * build(docs): add ipywidgets to .readthedocs.yml ([`07d5273`](https://github.com/geddy11/sysloss/commit/07d52739272cc3aa595821c894880865c80a8486))
 
-### Ci
+### Continuous Integration
 
 * ci: change id in conda receipe ([`87513c3`](https://github.com/geddy11/sysloss/commit/87513c3b7cdba7ddb24ea9976534d2fa1607369b))
 
@@ -126,7 +159,7 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * docs: hide output of cell in sensor daisy chain notebook ([`1cb8c0f`](https://github.com/geddy11/sysloss/commit/1cb8c0fe43f05234754397c0b83ee54e5e9f0e5a))
 
-* docs: change DOI to &#34;all versions&#34; in README.md ([`1d354bc`](https://github.com/geddy11/sysloss/commit/1d354bc46d0d89d0c28534c8257cfd8eb74aaea9))
+* docs: change DOI to "all versions" in README.md ([`1d354bc`](https://github.com/geddy11/sysloss/commit/1d354bc46d0d89d0c28534c8257cfd8eb74aaea9))
 
 * docs: remove cell output in battery life notebook ([`120af8d`](https://github.com/geddy11/sysloss/commit/120af8d8d487d06201c798edda21d0cf5a752868))
 
@@ -134,13 +167,14 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * docs: cleanup battery life notebook ([`2719bc5`](https://github.com/geddy11/sysloss/commit/2719bc5090a97e79d086f6e99fd68a8af5c328ea))
 
-### Fix
+### Fixes
 
 * fix: print tree in .tree() method to make it show in terminal mode ([`d2b43e3`](https://github.com/geddy11/sysloss/commit/d2b43e31fded161c4122b1bb61ed1486b2ee4818))
 
+
 ## v1.1.0 (2024-05-08)
 
-### Build
+### Build System
 
 * build: fix semver version_variables name in pyproject.toml ([`76d1c72`](https://github.com/geddy11/sysloss/commit/76d1c727752d140cb0b97b0985651e40947537d2))
 
@@ -150,11 +184,11 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * docs: add Zendo DOI to README.md ([`c19928d`](https://github.com/geddy11/sysloss/commit/c19928d77b6efc40a0c3c398f2c1d15cccf1f618))
 
-### Feature
+### Features
 
 * feat(system): new method .batt_life() to estimate battery lifetime ([`b48d429`](https://github.com/geddy11/sysloss/commit/b48d429a07c43de899f326e3b724de5e86b4e181))
 
-### Fix
+### Fixes
 
 * fix: relax python version requirement to 3.10 ([`63acad9`](https://github.com/geddy11/sysloss/commit/63acad9c7d59c70534413ba676d056e7e9d6f405))
 
@@ -164,9 +198,10 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1f999f81febf4712e6bcfc8d2917e3f241749281))
 
+
 ## v1.0.1 (2024-04-29)
 
-### Build
+### Build System
 
 * build(rtd): add more missing packages uses by sysLoss to rtd pipeline ([`c52c71b`](https://github.com/geddy11/sysloss/commit/c52c71b78957945a73b5bc48da8cd2e3a7f46a1a))
 
@@ -184,7 +219,7 @@ Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1
 
 * docs: change README.md image links to github ([`852ca43`](https://github.com/geddy11/sysloss/commit/852ca4381b367c9eebf9bf4cbcab1959c25e5c50))
 
-### Fix
+### Fixes
 
 * fix: add __version__ to package ([`056c259`](https://github.com/geddy11/sysloss/commit/056c2593f93c453b18b0b962ca8500240f987bff))
 
@@ -202,13 +237,14 @@ docs: change image links in readme to absolute ([`bd60345`](https://github.com/g
 
 build: fix readthedocs build ([`d738550`](https://github.com/geddy11/sysloss/commit/d73855035e6256706a9371e78534158ca27792f6))
 
+
 ## v1.0.0 (2024-04-24)
 
-### Chore
+### Chores
 
 * chore: move files from temporary project ([`9403a9d`](https://github.com/geddy11/sysloss/commit/9403a9dd346ae4d0a9dd337b216a6a641f9c5f25))
 
-### Ci
+### Continuous Integration
 
 * ci: disable coverage-badge ([`efcabaf`](https://github.com/geddy11/sysloss/commit/efcabaf47e6b38e9b49632667f73d35a1995bc7b))
 
