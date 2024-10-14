@@ -46,7 +46,7 @@ sphinx:
   config:
     autoapi_dirs: ["../src"]  # location to parse for API reference
     autoapi_options: 
-      ['members', 'undoc-members']
+      ['members', 'undoc-members', "show-module-summary"]
     #html_theme: "sphinx_rtd_theme"
     add_module_names: False
     bibtex_bibfiles: ['references.bib']

@@ -43,7 +43,17 @@ import numpy as np
 from scipy.interpolate import LinearNDInterpolator
 from warnings import warn
 
-__all__ = ["Source", "ILoad", "PLoad", "RLoad", "RLoss", "VLoss", "Converter", "LinReg"]
+__all__ = [
+    "Source",
+    "ILoad",
+    "PLoad",
+    "RLoad",
+    "RLoss",
+    "VLoss",
+    "Converter",
+    "LinReg",
+    "PSwitch",
+]
 
 
 @unique
@@ -55,6 +65,7 @@ class _ComponentTypes(Enum):
     SLOSS = 3
     CONVERTER = 4
     LINREG = 5
+    PSWITCH = 6
 
 
 MAX_DEFAULT = 1.0e6
@@ -207,16 +218,18 @@ class _ComponentInterface(metaclass=_ComponentMeta):
 
 
 class Source:
-    """The Source component must be the root of a system or subsystem.
+    """Voltage source.
+
+    The Source component must be the root of a system or subsystem.
 
     Parameters
     ----------
     name : str
         Source name.
     vo : float
-        Output voltage.
+        Output voltage (V).
     rs : float, optional
-        Source resistance, by default 0.0
+        Source resistance (Ohm), by default 0.0
     limits : dict, optional
         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: io, po, pl.
 
@@ -533,7 +546,7 @@ class RLoad(PLoad):
     name : str
         Load name.
     rs : float
-        Load resistance (ohm).
+        Load resistance (Ohm).
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
@@ -618,7 +631,7 @@ class RLoss:
     name : str
         Loss name.
     rs : float
-        Loss resistance (ohm).
+        Loss resistance (Ohm).
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
@@ -1395,6 +1408,215 @@ class LinReg:
         ret = pdict
         ret["vo"] = self._params["vo"]
         ret["vdrop"] = self._params["vdrop"]
+        if isinstance(self._ipr, _Interp0d):
+            ret["ig"] = abs(self._params["ig"])
+        else:
+            ret["ig"] = "interp"
+        ret["iis"] = self._params["iis"]
+        ret["rt"] = self._params["rt"]
+        return ret
+
+
+class PSwitch:
+    """Power switch.
+
+    The power switch ground current (ig) can be either a constant (float) or interpolated.
+    Interpolation data dict for ground current can be either 1D (function of output current only):
+
+    ``ig = {"vi":[3.6], "io":[0.005, 0.05, 0.5], "ig":[[36e-6, 37e-6, 35e-6]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``ig = {"vi":[0.9, 1.8, 3.6], "io":[0.005, 0.05, 0.5], "ig":[[5e-6, 5e-6, 5e-6], [7e-6, 7e-6, 7e-6], [36e-6, 37e-6, 35e-6]]}``
+
+    Parameters
+    ----------
+    name : str
+        Power switch name.
+    rs : float, optional
+        Switch resistance (Ohm), by default 0.0
+    ig : float | dict, optional
+        Ground current (A), by default 0.0.
+    limits : dict, optional
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
+    iis : float, optional
+        Sleep (shut-down) current (A), by default 0.0.
+    rt : float, optional
+        Thermal resistance (°C/W), by default 0.0.
+
+    """
+
+    @property
+    def _component_type(self):
+        """Defines the PSwitch component type"""
+        return _ComponentTypes.PSWITCH
+
+    @property
+    def _child_types(self):
+        """Defines allowable PSwitch child component types"""
+        et = list(_ComponentTypes)
+        et.remove(_ComponentTypes.SOURCE)
+        return et
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        rs: float = 0.0,
+        ig: float = 0.0,
+        limits: dict = LIMITS_DEFAULT,
+        iis: float = 0.0,
+        rt: float = 0.0,
+    ):
+        self._params = {}
+        self._params["name"] = name
+        self._params["rs"] = abs(rs)
+        if isinstance(ig, dict):
+            if not np.all(np.diff(ig["io"]) > 0):
+                raise ValueError("ig values must be monotonic increasing")
+            if np.min(ig["ig"]) < 0.0:
+                raise ValueError("ig values must be >= 0.0")
+            if len(ig["vi"]) == 1:
+                self._ipr = _Interp1d(ig["io"], ig["ig"][0])
+            else:
+                cur = []
+                volt = []
+                for v in ig["vi"]:
+                    cur += ig["io"]
+                    volt += len(ig["io"]) * [v]
+                    igi = np.asarray(ig["ig"]).reshape(1, -1)[0].tolist()
+                self._ipr = _Interp2d(cur, volt, igi)
+        else:
+            self._ipr = _Interp0d(abs(ig))
+        self._params["ig"] = ig
+        self._params["iis"] = abs(iis)
+        self._params["rt"] = abs(rt)
+        self._limits = limits
+
+    @classmethod
+    def from_file(cls, name: str, *, fname: str):
+        """Read PSwitch parameters from .toml file.
+
+        Parameters
+        ----------
+        name : str
+            PSwitch name
+        fname : str
+            File name.
+        """
+        with open(fname, "r") as f:
+            config = toml.load(f)
+
+        rs = _get_opt(config["pswitch"], "rs", RS_DEFAULT)
+        ig = _get_opt(config["pswitch"], "ig", IG_DEFAULT)
+        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
+        iis = _get_opt(config["pswitch"], "iis", IIS_DEFAULT)
+        rt = _get_opt(config["pswitch"], "rt", RT_DEFAULT)
+        return cls(name, rs=rs, ig=ig, limits=lim, iis=iis, rt=rt)
+
+    def _get_inp_current(self, phase, phase_conf=[]):
+        """Get initial current value for solver"""
+        i = self._ipr._interp(0.0, 0.0)
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            i = self._params["iis"]
+        return i
+
+    def _get_outp_voltage(self, phase, phase_conf=[]):
+        """Get initial voltage value for solver"""
+        return 0.0
+
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
+        """Calculate component input current from vi, vo and io"""
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0
+        i = io + self._ipr._interp(abs(io), abs(vi))
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            i = self._params["iis"]
+        return i
+
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
+        """Calculate component output voltage from vi, ii and io"""
+        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+            return 0.0, STATE_OFF
+        v = abs(vi) - self._params["rs"] * io
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            return 0.0, STATE_OFF
+        if vi >= 0.0:
+            return v, STATE_DEFAULT
+        return -v, STATE_DEFAULT
+
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
+        """Calculate power and loss in component"""
+        if _get_opt(pstate, "off", False):
+            return 0.0, 0.0, 0.0, 0.0, 0.0
+        if abs(vi) == 0.0:
+            loss = 0.0
+        else:
+            loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+        if abs(io) > 0.0:
+            loss += (abs(vi) - abs(vo)) * io
+        pwr = abs(vi * ii)
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            loss = abs(self._params["iis"] * vi)
+            pwr = abs(self._params["iis"] * vi)
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
+
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
+        """Check limits"""
+        if phase_conf:
+            if phase not in phase_conf:
+                return ""
+        pi, pl, _, tr, tp = self._solv_pwr_loss(
+            vi, vo, ii, io, ta, phase, phase_conf=[]
+        )
+        tp = tr + ta
+        return _get_warns(
+            self._limits,
+            {
+                "vi": vi,
+                "vo": vo,
+                "vd": abs(vi - vo),
+                "ii": ii,
+                "io": io,
+                "pi": pi,
+                "po": pi - pl,
+                "pl": pl,
+                "tr": tr,
+                "tp": tp,
+            },
+        )
+
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Ground current (A)",
+                "{} ground current".format(self._params["name"]),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} ground current".format(self._params["name"]),
+        ]
+
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        ret["rs"] = self._params["rs"]
         if isinstance(self._ipr, _Interp0d):
             ret["ig"] = abs(self._params["ig"])
         else:

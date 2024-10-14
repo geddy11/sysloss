@@ -196,6 +196,26 @@ def test_linreg():
         )
 
 
+def test_pswitch():
+    """Check PSwitch component"""
+    la = PSwitch(
+        "Load switch",
+        rs=0.1,
+        ig={
+            "vi": [0.9, 1.8, 3.6],
+            "io": [0.005, 0.05, 0.5],
+            "ig": [[5e-6, 5e-6, 5e-6], [7e-6, 7e-6, 7e-6], [36e-6, 37e-6, 35e-6]],
+        },
+        iis=1.0e-6,
+    )
+    assert la._component_type == _ComponentTypes.PSWITCH, "PSwitch component type"
+    assert _ComponentTypes.SOURCE not in list(la._child_types), "PSwitch child types"
+    lb = PSwitch.from_file("Load switch", fname="tests/data/pswitch.toml")
+    assert la._params == lb._params, "PSwitch parameters from file"
+    assert la._limits == lb._limits, "PSwitch limits from file"
+    assert isinstance(la, _ComponentInterface), "instance PSwitch"
+
+
 def test_interpolators():
     """Check interpolators"""
     interp0d = _Interp0d(0.66)

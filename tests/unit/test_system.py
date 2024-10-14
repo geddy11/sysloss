@@ -44,10 +44,12 @@ def test_case1():
     case1.add_comp("Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, ig=150e-6))
     case1.add_comp("LDO 2.5V", comp=PLoad("ADC", pwr=15e-3))
     case1.add_comp("5V boost", comp=RLoad("Res divider", rs=200e3))
+    case1.add_comp("5V boost", comp=PSwitch("Load switch", rs=150e-3))
+    case1.add_comp("Load switch", comp=PLoad("MCU 2", pwr=0.12))
     with pytest.raises(RuntimeError):
         case1.solve(maxiter=1)
     df = case1.solve(quiet=False)
-    rows = 11
+    rows = 13
     assert df.shape[0] == rows, "Case1 solution row count"
     assert df.shape[1] == 11, "Case1 solution column count"
     df = case1.solve(tags={"Battery": "small", "Interval": "fast"})
@@ -55,7 +57,7 @@ def test_case1():
     assert df.shape[1] == 13, "Case1 solution column count"
     assert np.allclose(
         df[df["Component"] == "System total"]["Efficiency (%)"][rows - 1],
-        79.4542,
+        84.8522,
         rtol=1e-6,
     ), "Case1 efficiency"
     assert (
@@ -174,6 +176,21 @@ def test_case5b():
     ), "Case5b current"
     dfp = case5b.params()
     assert len(dfp) == 2, "Case5b parameters row count"
+
+
+def test_case5c():
+    """PSwitch with invalid interpolation parameter"""
+    case5c = System("Case5c system", Source("5V system", vo=5.0))
+    igdata = {"vi": [5.0], "io": [0.1, 0.4, 0.6, 0.5], "ig": [[0.3, 0.4, 0.67, 0.89]]}
+    with pytest.raises(ValueError):
+        case5c.add_comp("5V system", comp=PSwitch("PSwitch", rs=3.3, ig=igdata))
+    igdata = {
+        "vi": [5.0],
+        "io": [0.0, 0.4, 0.6, 0.8],
+        "ig": [[-0.3, -0.4, -0.67, -0.89]],
+    }
+    with pytest.raises(ValueError):
+        case5c.add_comp("5V system", comp=PSwitch("PSwitch", rs=1.3, ig=igdata))
 
 
 def test_case6():
@@ -329,6 +346,8 @@ def test_case15():
     case15.set_comp_phases("Buck 3.3", phase_conf=["active"])
     case15.add_comp("5V", comp=LinReg("LDO 1.8", vo=1.8))
     case15.set_comp_phases("LDO 1.8", phase_conf=["sleep"])
+    case15.add_comp("5V", comp=PSwitch("PSwitch 1", rs=0.55, ig=1e-3))
+    case15.set_comp_phases("PSwitch 1", phase_conf=["active"])
     case15.add_comp("Buck 3.3", comp=PLoad("MCU", pwr=0.2))
     case15.set_comp_phases("MCU", phase_conf={"sleep": 1e-6, "active": 0.2})
     case15.add_comp("LDO 1.8", comp=ILoad("Sensor", ii=1.7e-3))
@@ -362,7 +381,7 @@ def test_case15():
     case15.set_sys_phases(phases)
     assert phases == case15.get_sys_phases()
     df = case15.phases()
-    expl = 15
+    expl = 16
     assert len(df) == expl, "Case15 phase report length"
     with pytest.raises(ValueError):
         case15.solve(phase="unknown")
@@ -427,6 +446,10 @@ def test_case16():
     assert (
         type(case16.plot_interp("LinReg 1")) == matplotlib.figure.Figure
     ), "Case16 LinReg 1D figure"
+    case16.add_comp("12V", comp=PSwitch("PSwitch 1", rs=1.0, ig=igdata))
+    assert (
+        type(case16.plot_interp("PSwitch 1")) == matplotlib.figure.Figure
+    ), "Case16 PSwitch 1D figure"
     igdata = {
         "vi": [2.5, 5.0],
         "io": [0.0, 0.01, 0.02, 0.1],
@@ -436,6 +459,12 @@ def test_case16():
     assert (
         type(case16.plot_interp("LinReg 2", plot3d=True)) == matplotlib.figure.Figure
     ), "Case16 LinReg 2D figure"
+    case16.add_comp("12V", comp=PSwitch("PSwitch 2", rs=0.1, ig=igdata))
+    assert (
+        type(case16.plot_interp("PSwitch 2", plot3d=True)) == matplotlib.figure.Figure
+    ), "Case16 PSwitch 2D figure"
+    dfp = case16.params()
+    assert dfp.shape[0] == 9, "Case 16 solution row count"
 
 
 cap = 0.15

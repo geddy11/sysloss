@@ -601,3 +601,94 @@ def test_linreg(linreg, name, vo, vdrop, ig, iis, rt, active_phases):
             assert close(tr, eloss * rt), "Check LinReg temperature rise"
             if eloss * rt > 0.0:
                 assert close(tp, 125.0 + eloss * rt), "Check LinReg peak temperature"
+
+
+@pytest.fixture()
+def pswitch(name, rs, ig, iis, rt, active_phases):
+    """Return a PSwitch object."""
+    return PSwitch(name, rs=rs, ig=ig, iis=iis, rt=rt)
+
+
+@pytest.mark.parametrize(
+    "name, rs, ig, iis, rt, active_phases",
+    [
+        ("No phase", 1.2, 1e-5, 1e-6, 11.9, []),
+        ("On-phase", 0.88, 1.7e-4, 2e-5, 130.0, ["Apple", "Orange"]),
+        ("Off-phase", 0.67, 1e-3, 1.2e-4, 34.5, ["Pear"]),
+    ],
+)
+def test_pswitch(pswitch, name, rs, ig, iis, rt, active_phases):
+    """Test PSwitch object with different parameters"""
+    assert pswitch._params["name"] == name
+
+    state = {}
+    for ict in INP_CURR_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = s
+            if ict[0] == 0.0 or s:
+                ii = 0.0
+            elif active_phases == []:
+                ii = ict[2] + ig
+            elif ict[3] in active_phases:
+                ii = ict[2] + ig
+            elif ict[3] not in active_phases:
+                ii = iis
+            assert close(
+                pswitch._solv_inp_curr(
+                    ict[0], ict[1], ict[2], ict[3], active_phases, state
+                ),
+                ii,
+            ), "Check PSwitch input current"
+    for ovt in OUTP_VOLT_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = s
+            if ovt[0] >= 0.0:
+                v = ovt[0] - rs * ovt[2]
+            else:
+                v = ovt[0] + rs * ovt[2]
+            phase_off = False
+            if ovt[0] == 0.0 or s:
+                v = 0.0
+            elif active_phases != []:
+                if ovt[3] not in active_phases:
+                    v = 0.0
+                    phase_off = True
+            vs, vstate = pswitch._solv_outp_volt(
+                ovt[0], ovt[1], ovt[2], ovt[3], active_phases, state
+            )
+            assert close(vs, v), "Check PSwitch output voltage"
+            if ovt[0] == 0.0 or phase_off:
+                assert vstate["off"] == True, "Check PSwitch state"
+            else:
+                assert vstate["off"] == s, "Check PSwitch state"
+    for plt in PWR_LOSS_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = s
+            pwr, loss, eff, tr, tp = pswitch._solv_pwr_loss(
+                plt[0], plt[1], plt[2], plt[3], 125.0, plt[4], active_phases, state
+            )
+            ipwr = abs(plt[0] * plt[2])
+            if plt[0] >= 0.0:
+                v = plt[0] - rs * ovt[2]
+            else:
+                v = plt[0] + rs * ovt[2]
+            eloss = abs(ig * plt[0]) + (abs(plt[0]) - abs(plt[1])) * plt[3]
+            if active_phases != []:
+                if plt[4] not in active_phases:
+                    eloss = abs(iis * plt[0])
+                    ipwr = abs(iis * plt[0])
+            if s:
+                ipwr, eloss = 0.0, 0.0
+            assert close(pwr, ipwr), "Check PSwitch power"
+            assert close(loss, eloss), "Check PSwitch loss"
+            if ipwr == 0.0 or v == 0.0:
+                eeff = 0.0
+            opwr = ipwr - eloss
+            if ipwr == 0.0:
+                eeff = 0.0
+            else:
+                eeff = 100.0 * abs(opwr / ipwr)
+            assert close(eff, eeff), "Check PSwitch efficiency"
+            assert close(tr, eloss * rt), "Check PSwitch temperature rise"
+            if eloss * rt > 0.0:
+                assert close(tp, 125.0 + eloss * rt), "Check PSwitch peak temperature"

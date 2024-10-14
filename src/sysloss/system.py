@@ -152,6 +152,7 @@ class System:
                         iq = _get_opt(c["params"], "iq", 0.0)
                         ig = _get_opt(c["params"], "ig", 0.0)
                         iis = _get_opt(c["params"], "iis", 0.0)
+                        rt = _get_opt(c["params"], "rt", 0.0)
                         if c["type"] == "CONVERTER":
                             vo = _get_mand(c["params"], "vo")
                             eff = _get_mand(c["params"], "eff")
@@ -164,12 +165,12 @@ class System:
                                     iq=iq,
                                     limits=limits,
                                     iis=iis,
+                                    rt=rt,
                                 ),
                             )
                         elif c["type"] == "LINREG":
                             vo = _get_mand(c["params"], "vo")
                             vdrop = _get_opt(c["params"], "vdrop", 0.0)
-                            af = _get_opt(c["params"], "active_phases", [])
                             self.add_comp(
                                 p,
                                 comp=LinReg(
@@ -180,38 +181,59 @@ class System:
                                     ig=ig,
                                     limits=limits,
                                     iis=iis,
+                                    rt=rt,
                                 ),
                             )
                         elif c["type"] == "SLOSS":
                             if "rs" in c["params"]:
                                 rs = _get_mand(c["params"], "rs")
                                 self.add_comp(
-                                    p, comp=RLoss(cname, rs=rs, limits=limits)
+                                    p, comp=RLoss(cname, rs=rs, rt=rt, limits=limits)
                                 )
                             else:
                                 vdrop = _get_mand(c["params"], "vdrop")
                                 self.add_comp(
-                                    p, comp=VLoss(cname, vdrop=vdrop, limits=limits)
+                                    p,
+                                    comp=VLoss(
+                                        cname, vdrop=vdrop, rt=rt, limits=limits
+                                    ),
                                 )
                         elif c["type"] == "LOAD":
-                            # pl = _get_opt(c["params"], "phase_loads", {})
                             if "pwr" in c["params"]:
                                 pwr = _get_mand(c["params"], "pwr")
+                                pwrs = _get_opt(c["params"], "pwrs", 0.0)
                                 self.add_comp(
                                     p,
-                                    comp=PLoad(cname, pwr=pwr, limits=limits),
+                                    comp=PLoad(
+                                        cname, pwr=pwr, limits=limits, pwrs=pwrs, rt=rt
+                                    ),
                                 )
                             elif "rs" in c["params"]:
                                 rs = _get_mand(c["params"], "rs")
                                 self.add_comp(
-                                    p, comp=RLoad(cname, rs=rs, limits=limits)
+                                    p, comp=RLoad(cname, rs=rs, rt=rt, limits=limits)
                                 )
                             else:
                                 ii = _get_mand(c["params"], "ii")
                                 self.add_comp(
                                     p,
-                                    comp=ILoad(cname, ii=ii, limits=limits, iis=iis),
+                                    comp=ILoad(
+                                        cname, ii=ii, limits=limits, iis=iis, rt=rt
+                                    ),
                                 )
+                        elif c["type"] == "PSWITCH":
+                            rs = _get_opt(c["params"], "rs", 0.0)
+                            self.add_comp(
+                                p,
+                                comp=PSwitch(
+                                    cname,
+                                    rs=rs,
+                                    ig=ig,
+                                    limits=limits,
+                                    iis=iis,
+                                    rt=rt,
+                                ),
+                            )
         phases = _get_opt(sysparams, "phases", {})
         self._g.attrs["phases"] = phases
         phase_conf = _get_mand(sysparams, "phase_conf")
@@ -1143,7 +1165,7 @@ class System:
             ph_names = []
             if tname == "SOURCE" or tname == "SLOSS":
                 ph_names += ["N/A"]
-            elif tname == "CONVERTER" or tname == "LINREG":
+            elif tname == "CONVERTER" or tname == "LINREG" or tname == "PSWITCH":
                 if len(self._phase_lkup[n]) > 0:
                     for p in phase_names:
                         if p in self._phase_lkup[n]:
@@ -1171,6 +1193,10 @@ class System:
                     break
                 if tname == "CONVERTER" or tname == "LINREG":
                     rs += [""]
+                    ii += [""]
+                    pwr += [""]
+                if tname == "PSWITCH":
+                    rs += [self._g[n]._params["rs"]]
                     ii += [""]
                     pwr += [""]
                 if tname == "LOAD":
