@@ -217,7 +217,49 @@ class _ComponentInterface(metaclass=_ComponentMeta):
     pass
 
 
-class Source:
+class _Component:
+    """Generic component"""
+
+    @property
+    def _component_type(self):
+        """Defines the component type"""
+        return None
+
+    @property
+    def _child_types(self):
+        """Defines allowable child component types"""
+        et = list(_ComponentTypes)
+        return et
+
+    def __init__(self, name: str):
+        self._params = {}
+        self._params["name"] = name
+        self._limits = LIMITS_DEFAULT
+        self._ipr = None
+
+    @classmethod
+    def from_file(cls, name: str, *, fname: str):
+        """Read parameters from .toml file."""
+        return cls(name)
+
+    def _get_inp_current(self, phase, phase_conf={}):
+        """Get initial current value for solver"""
+        return 0.0
+
+    def _get_outp_voltage(self, phase, phase_conf={}):
+        """Get initial voltage value for solver"""
+        return 0.0
+
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        return STATE_DEFAULT
+
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        return ["xlabel", "ylabel", "title"]
+
+
+class Source(_Component):
     """Voltage source.
 
     The Source component must be the root of a system or subsystem.
@@ -282,17 +324,9 @@ class Source:
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         return cls(name, vo=v, rs=r, limits=lim)
 
-    def _get_inp_current(self, phase, phase_conf={}):
-        """Get initial current value for solver"""
-        return 0.0
-
     def _get_outp_voltage(self, phase, phase_conf={}):
         """Get initial voltage value for solver"""
         return self._params["vo"]
-
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -328,7 +362,7 @@ class Source:
         return ret
 
 
-class PLoad:
+class PLoad(_Component):
     """Power load.
 
     Parameters
@@ -392,18 +426,6 @@ class PLoad:
         pwrs = _get_opt(config["pload"], "pwrs", PWRS_DEFAULT)
         rt = _get_opt(config["pload"], "rt", RT_DEFAULT)
         return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt)
-
-    def _get_inp_current(self, phase, phase_conf={}):
-        """Get initial current value for solver"""
-        return 0.0
-
-    def _get_outp_voltage(self, phase, phase_conf={}):
-        """Get initial voltage value for solver"""
-        return 0.0
-
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -621,7 +643,7 @@ class RLoad(PLoad):
         return ret
 
 
-class RLoss:
+class RLoss(_Component):
     """Resistive loss.
 
     This loss element is connected in series with other elements.
@@ -685,18 +707,6 @@ class RLoss:
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         return cls(name, rs=r, limits=lim, rt=rt)
 
-    def _get_inp_current(self, phase, phase_conf={}):
-        """Get initial current value for solver"""
-        return 0.0
-
-    def _get_outp_voltage(self, phase, phase_conf={}):
-        """Get initial voltage value for solver"""
-        return 0.0
-
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
-
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
         return _calc_inp_current(vi, io, pstate)
@@ -753,7 +763,7 @@ class RLoss:
         return ret
 
 
-class VLoss:
+class VLoss(_Component):
     """Voltage loss.
 
     This loss element is connected in series with other elements.
@@ -840,18 +850,6 @@ class VLoss:
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         return cls(name, vdrop=vd, rt=rt, limits=lim)
 
-    def _get_inp_current(self, phase, phase_conf={}):
-        """Get initial current value for solver"""
-        return 0.0
-
-    def _get_outp_voltage(self, phase, phase_conf={}):
-        """Get initial voltage value for solver"""
-        return 0.0
-
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
-
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
         return _calc_inp_current(vi, io, pstate)
@@ -925,7 +923,7 @@ class VLoss:
         return ret
 
 
-class Converter:
+class Converter(_Component):
     """Voltage converter.
 
     The converter efficiency can be either a constant (float) or interpolated.
@@ -1057,10 +1055,6 @@ class Converter:
             v = 0.0
         return v
 
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
-
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
         """Calculate component input current from vi, vo and io"""
         if (
@@ -1158,7 +1152,7 @@ class Converter:
         return ret
 
 
-class LinReg:
+class LinReg(_Component):
     """Linear voltage regulator.
 
     If vi - vo < vdrop, the output voltage is reduced to vi - vdrop during analysis.
@@ -1312,10 +1306,6 @@ class LinReg:
             v = 0.0
         return v
 
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
-
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
         """Calculate component input current from vi, vo and io"""
         if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
@@ -1417,7 +1407,7 @@ class LinReg:
         return ret
 
 
-class PSwitch:
+class PSwitch(_Component):
     """Power switch.
 
     The power switch ground current (ig) can be either a constant (float) or interpolated.
@@ -1522,14 +1512,6 @@ class PSwitch:
         elif phase not in phase_conf:
             i = self._params["iis"]
         return i
-
-    def _get_outp_voltage(self, phase, phase_conf=[]):
-        """Get initial voltage value for solver"""
-        return 0.0
-
-    def _get_state(self, phase, phase_conf={}):
-        """Get initial state value for solver"""
-        return STATE_DEFAULT
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
         """Calculate component input current from vi, vo and io"""

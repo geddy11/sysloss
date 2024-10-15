@@ -22,7 +22,7 @@
 
 
 from sysloss.components import *
-from sysloss.components import _ComponentTypes, _ComponentInterface
+from sysloss.components import _ComponentTypes, _ComponentInterface, _Component
 from sysloss.components import LIMITS_DEFAULT
 from sysloss.components import _Interp0d, _Interp1d, _Interp2d
 import numpy as np
@@ -245,3 +245,18 @@ def test_interpolators():
     assert close(interp2d._interp(1.7, 5), fxy[5]), "2D interpolator q5"
     assert close(interp2d._interp(1.7, 0.33), fxy[2]), "2D interpolator q6"
     assert close(interp2d._interp(0.5, 2.75), fxy[1]), "2D interpolator q7"
+
+
+def test_component():
+    """Check _Component class"""
+    c = _Component("Test")
+    assert c._component_type == None, "_Component component type"
+    assert list(_ComponentTypes) == c._child_types, "_Component child types"
+    assert isinstance(c, _ComponentInterface), "instance _Component"
+    assert c._get_annot() == [
+        "xlabel",
+        "ylabel",
+        "title",
+    ], "Check _Component annotation labels"
+    cb = _Component.from_file("Test", fname="None")
+    assert isinstance(cb, _ComponentInterface), "instance _Component"
