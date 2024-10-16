@@ -258,6 +258,17 @@ class _Component:
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
         return ["xlabel", "ylabel", "title"]
 
+    def _get_params(self, pdict):
+        """Return dict with component parameters"""
+        ret = pdict
+        for param in pdict:
+            if param in self._params:
+                if isinstance(self._params[param], dict):
+                    ret[param] = "interp"
+                else:
+                    ret[param] = self._params[param]
+        return ret
+
 
 class Source(_Component):
     """Voltage source.
@@ -353,13 +364,6 @@ class Source(_Component):
         return _get_warns(
             self._limits, {"io": io, "po": vo * io, "pl": self._params["rs"] * io * io}
         )
-
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["vo"] = self._params["vo"]
-        ret["rs"] = self._params["rs"]
-        return ret
 
 
 class PLoad(_Component):
@@ -462,14 +466,6 @@ class PLoad(_Component):
         tp = tr + ta
         return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr, "tp": tp})
 
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["pwr"] = self._params["pwr"]
-        ret["pwrs"] = self._params["pwrs"]
-        ret["rt"] = self._params["rt"]
-        return ret
-
 
 class ILoad(PLoad):
     """Current load.
@@ -551,14 +547,6 @@ class ILoad(PLoad):
         tp = tr + ta
         return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr, "tp": tp})
 
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["ii"] = self._params["ii"]
-        ret["iis"] = self._params["iis"]
-        ret["rt"] = self._params["rt"]
-        return ret
-
 
 class RLoad(PLoad):
     """Resistive load.
@@ -634,13 +622,6 @@ class RLoad(PLoad):
         return _get_warns(
             self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr, "tp": tp}
         )
-
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["rs"] = self._params["rs"]
-        ret["rt"] = self._params["rt"]
-        return ret
 
 
 class RLoss(_Component):
@@ -755,15 +736,8 @@ class RLoss(_Component):
             },
         )
 
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["rs"] = self._params["rs"]
-        ret["rt"] = self._params["rt"]
-        return ret
 
-
-class VLoss(_Component):
+class VLoss(RLoss):
     """Voltage loss.
 
     This loss element is connected in series with other elements.
@@ -877,27 +851,6 @@ class VLoss(_Component):
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), tr, ta + tr
 
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        pl = abs(vi) * ii - abs(vo) * io
-        tr = pl * self._params["rt"]
-        tp = tr + ta
-        return _get_warns(
-            self._limits,
-            {
-                "vi": vi,
-                "vo": vo,
-                "vd": abs(vi - vo),
-                "ii": ii,
-                "io": io,
-                "pi": abs(vi * ii),
-                "po": abs(vo * io),
-                "pl": pl,
-                "tr": tr,
-                "tp": tp,
-            },
-        )
-
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
@@ -911,16 +864,6 @@ class VLoss(_Component):
             "Input voltage (V)",
             "{} voltage drop".format(self._params["name"]),
         ]
-
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["rt"] = self._params["rt"]
-        if isinstance(self._ipr, _Interp0d):
-            ret["vdrop"] = abs(self._params["vdrop"])
-        else:
-            ret["vdrop"] = "interp"
-        return ret
 
 
 class Converter(_Component):
@@ -1137,19 +1080,6 @@ class Converter(_Component):
             "Input voltage (V)",
             "{} efficiency for Vo={}V".format(self._params["name"], self._params["vo"]),
         ]
-
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["vo"] = self._params["vo"]
-        ret["iq"] = self._params["iq"]
-        if isinstance(self._ipr, _Interp0d):
-            ret["eff"] = abs(self._params["eff"])
-        else:
-            ret["eff"] = "interp"
-        ret["iis"] = self._params["iis"]
-        ret["rt"] = self._params["rt"]
-        return ret
 
 
 class LinReg(_Component):
@@ -1393,19 +1323,6 @@ class LinReg(_Component):
             ),
         ]
 
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["vo"] = self._params["vo"]
-        ret["vdrop"] = self._params["vdrop"]
-        if isinstance(self._ipr, _Interp0d):
-            ret["ig"] = abs(self._params["ig"])
-        else:
-            ret["ig"] = "interp"
-        ret["iis"] = self._params["iis"]
-        ret["rt"] = self._params["rt"]
-        return ret
-
 
 class PSwitch(_Component):
     """Power switch.
@@ -1594,15 +1511,3 @@ class PSwitch(_Component):
             "Input voltage (V)",
             "{} ground current".format(self._params["name"]),
         ]
-
-    def _get_params(self, pdict):
-        """Return dict with component parameters"""
-        ret = pdict
-        ret["rs"] = self._params["rs"]
-        if isinstance(self._ipr, _Interp0d):
-            ret["ig"] = abs(self._params["ig"])
-        else:
-            ret["ig"] = "interp"
-        ret["iis"] = self._params["iis"]
-        ret["rt"] = self._params["rt"]
-        return ret
