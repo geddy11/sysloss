@@ -109,19 +109,4 @@ jobs:
         if: steps.release.outputs.released == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install grayscull
-        run: pip install grayskull
-
-      - name: Create receipe
-        run: grayskull pypi sysloss
-
-      - name: Update author in receipe
-        run: sed -i 's/github-actions-up-and-running/geddy11/g' ./sysloss/meta.yaml
-
-      - name: Get receipe
-        uses: actions/upload-artifact@v4
-        with:
-          name: conda
-          path: ./sysloss
   
