@@ -6,6 +6,7 @@ root: Getting started
 chapters:
 - file: autoapi/index
 - file: nb/Component files
+- file: nb/Diagrams
 - file: tutorials
   sections:
   - file: nb/Bluetooth sensor

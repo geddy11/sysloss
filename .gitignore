@@ -1,6 +1,8 @@
 *.json
 !tests/data/*.json
 work
+tests/unit/*.svg
+docs/nb/control_module.svg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
