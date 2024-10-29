@@ -13,7 +13,7 @@ build:
   jobs:
     post_create_environment:
       # install graphviz
-      - apt-get install graphviz
+      - apt-get install graphviz -y
       # Install poetry et.al.
       # https://python-poetry.org/docs/#installing-manually
       - pip install poetry jupyter-book sphinx-autoapi toml numpy pandas rustworkx scipy rich matplotlib tqdm ipywidgets graphviz packaging

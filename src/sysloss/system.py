@@ -67,6 +67,8 @@ class System:
         System name.
     source : Source
         Source component.
+    group : str, optional
+        Group name, for grouping components together.
 
     Raises
     ------
@@ -79,7 +81,7 @@ class System:
 
     """
 
-    def __init__(self, name: str, source: Source):
+    def __init__(self, name: str, source: Source, *, group: str = ""):
         """Class constructor"""
         self._g = None
         if not isinstance(source, Source):
@@ -93,6 +95,8 @@ class System:
         self._g.attrs["phase_conf"][source._params["name"]] = {}
         self._g.attrs["nodes"] = {}
         self._g.attrs["nodes"][source._params["name"]] = pidx
+        self._g.attrs["groups"] = {}
+        self._g.attrs["groups"][source._params["name"]] = group
 
     @classmethod
     def from_file(cls, fname: str):
@@ -238,6 +242,11 @@ class System:
         self._g.attrs["phases"] = phases
         phase_conf = _get_mand(sysparams, "phase_conf")
         self._g.attrs["phase_conf"] = phase_conf
+        groups = _get_opt(sysparams, "groups", {})
+        if groups == {}:
+            for key in phase_conf:
+                groups[key] = ""
+        self._g.attrs["groups"] = groups
 
         return self
 
@@ -330,7 +339,7 @@ class System:
             tree.add(self._make_rtree(adj, child))
         return tree
 
-    def add_comp(self, parent: str, *, comp):
+    def add_comp(self, parent: str, *, comp, group: str = ""):
         """Add component to system.
 
         Parameters
@@ -339,6 +348,8 @@ class System:
             Name of parent component.
         comp : component
             Component (from :py:mod:`~sysloss.components`).
+        group : str, optional
+            Group name, for grouping components together.
 
         Raises
         ------
@@ -348,7 +359,7 @@ class System:
         Examples
         --------
         >>> sys.add_comp("Vin", comp=Converter("Buck", vo=1.8, eff=0.87))
-        >>> sys.add_comp("Buck", comp=PLoad("MCU", pwr=0.015))
+        >>> sys.add_comp("Buck", comp=PLoad("MCU", pwr=0.015), group="Main")
 
         """
         # check that parent exists
@@ -365,17 +376,18 @@ class System:
             )
         cidx = self._g.add_child(pidx, comp, None)
         self._g.attrs["nodes"][comp._params["name"]] = cidx
-        # if not isinstance(phase_config, dict) and not isinstance(phase_config, list):
-        #    raise ValueError("phase_config must be dict or list")
         self._g.attrs["phase_conf"][comp._params["name"]] = {}
+        self._g.attrs["groups"][comp._params["name"]] = group
 
-    def add_source(self, source: Source):
+    def add_source(self, source: Source, *, group: str = ""):
         """Add an additional Source to the system.
 
         Parameters
         ----------
         source : Source
             Source component.
+        group : str, optional
+            Group name, for grouping components together.
 
         Raises
         ------
@@ -394,8 +406,9 @@ class System:
         pidx = self._g.add_node(source)
         self._g.attrs["nodes"][source._params["name"]] = pidx
         self._g.attrs["phase_conf"][source._params["name"]] = {}
+        self._g.attrs["groups"][source._params["name"]] = group
 
-    def change_comp(self, name: str, *, comp):
+    def change_comp(self, name: str, *, comp, group: str = ""):
         """Replace component.
 
         The new component can be of same type (parameter change), or a new type
@@ -407,6 +420,8 @@ class System:
             Name of component to be changed.
         comp : component
             Component (from :py:mod:`~sysloss.components`).
+        group : str, optional
+            Group name, for grouping components together.
 
         Raises
         ------
@@ -448,6 +463,9 @@ class System:
         # delete old phase config and set new default
         del [self._g.attrs["phase_conf"][name]]
         self._g.attrs["phase_conf"][comp._params["name"]] = {}
+        # delete old group and set new
+        del [self._g.attrs["groups"][name]]
+        self._g.attrs["groups"][comp._params["name"]] = group
 
     def del_comp(self, name: str, *, del_childs: bool = True):
         """Delete component.
@@ -496,11 +514,13 @@ class System:
             for c in rx.descendants(self._g, eidx):
                 del [self._g.attrs["nodes"][self._g[c]._params["name"]]]
                 del [self._g.attrs["phase_conf"][self._g[c]._params["name"]]]
+                del [self._g.attrs["groups"][self._g[c]._params["name"]]]
                 self._g.remove_node(c)
         # delete node
         self._g.remove_node(eidx)
         del [self._g.attrs["nodes"][name]]
         del [self._g.attrs["phase_conf"][name]]
+        del [self._g.attrs["groups"][name]]
         # restore links between new parent and childs, unless deleted
         if not del_childs:
             if childs[eidx] != -1:
@@ -726,16 +746,18 @@ class System:
             # calculate results for each node
             names, parent, typ, pwr, loss, trise, tpeak = [], [], [], [], [], [], []
             eff, warn, vsi, iso, vso, isi = [], [], [], [], [], []
-            domain, phases, ener, dname = [], [], [], "none"
+            domain, phases, ener, dname, group = [], [], [], "none", []
             sources, dwarns = {}, {}
             show_trise = False
             for n in self._topo_nodes:  # [vi, vo, ii, io]
                 phase_config = self._phase_lkup[n]
-                names += [self._g[n]._params["name"]]
+                name = self._g[n]._params["name"]
+                names += [name]
                 if self._g[n]._component_type.name == "SOURCE":
                     dname = self._g[n]._params["name"]
                 domain += [dname]
                 phases += [ph]
+                group += [self._g.attrs["groups"][name]]
                 vi = v[n]
                 vo = v[n]
                 ii = i[n]
@@ -788,6 +810,7 @@ class System:
                 parent += [""]
                 domain += [""]
                 phases += [ph]
+                group += [""]
                 vsi += [sources[list(sources.keys())[d]]]
                 vso += [""]
                 isi += [""]
@@ -809,6 +832,7 @@ class System:
             parent += [""]
             domain += [""]
             phases += [ph]
+            group += [""]
             vsi += [""]
             vso += [""]
             isi += [""]
@@ -830,6 +854,8 @@ class System:
             res["Type"] = typ
             res["Parent"] = parent
             res["Domain"] = domain
+            if any(["" != x for x in group]):
+                res["Group"] = group
             if tags != {}:
                 for key in tags.keys():
                     res[key] = [tags[key]] * len(names)
@@ -1257,6 +1283,7 @@ class System:
                 "version": sysloss.__version__,
                 "phases": self._g.attrs["phases"],
                 "phase_conf": self._g.attrs["phase_conf"],
+                "groups": self._g.attrs["groups"],
             }
         }
         ridx = self._get_sources()
