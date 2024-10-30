@@ -27,12 +27,30 @@ The diagrams can be customized with the full range of Graphviz attributes.
 """
 
 from sysloss.system import System
-import copy
-from rustworkx.visualization import graphviz_draw
+import copy, io
+import pydot
+from PIL import Image
 
 
 __all__ = ["get_conf", "make_diag"]
 
+
+_DEF_GRAPH_CONF = {
+    "rankdir": "TB",
+    "ranksep": "0.3 equally",
+    "splines": "line",
+    "nodesep": "0.3",
+    "overlap": "scale",
+    "dpi": "100",
+}
+_DEF_CLUSTER_CONF = {
+    "default": {
+        "rank": "same",
+        "fillcolor": "white",
+        "style": "filled",
+        "penwidth": "1.5",
+    }
+}
 _DEF_NODE_CONF = {
     "default": {
         "fillcolor": "white",
@@ -41,18 +59,18 @@ _DEF_NODE_CONF = {
         "penwidth": "1.5",
     }
 }
-
-_DEF_GRAPH_CONF = {
-    "rankdir": "TB",
-    "ranksep": "equally",
-    "splines": "line",
-    "nodesep": "0.5",
-    "overlap": "scale",
-    "dpi": "100",
+_DEF_EDGE_CONF = {
+    "arrowhead": "none",
+    "headport": "center",
+    "tailport": "center",
+    "color": "black",
 }
-_DEF_EDGE_CONF = {"arrowhead": "none", "headport": "center", "tailport": "center"}
-
-_DEF_CONF = {"graph": _DEF_GRAPH_CONF, "node": _DEF_NODE_CONF, "edge": _DEF_EDGE_CONF}
+_DEF_CONF = {
+    "graph": _DEF_GRAPH_CONF,
+    "cluster": _DEF_CLUSTER_CONF,
+    "node": _DEF_NODE_CONF,
+    "edge": _DEF_EDGE_CONF,
+}
 
 
 def get_conf() -> dict:
@@ -115,31 +133,52 @@ def make_diag(sys: System, *, fname: str = None, config: dict = {}):
         bd_conf = copy.deepcopy(_DEF_CONF)
     else:
         bd_conf = copy.deepcopy(config)
+    graph = pydot.Dot("sysLoss", label=sys._g.attrs["name"], **bd_conf["graph"])
 
-    def node_attr(node):
-        conf = copy.deepcopy(bd_conf["node"]["default"])
-        conf["label"] = node._params["name"]
-        comp = type(node).__name__
-        if comp in bd_conf["node"]:
-            for key in bd_conf["node"][comp]:
-                conf[key] = bd_conf["node"][comp][key]
-        return conf
+    def add_node(gr, name, attrs):
+        comp = type(sys._g[sys._g.attrs["nodes"][name]]).__name__
+        conf = copy.deepcopy(attrs["default"])
+        # component type overrieds
+        if comp in attrs:
+            for key in attrs[comp]:
+                conf[key] = attrs[comp][key]
+        # component instance overrides
+        if name in attrs:
+            for key in attrs[name]:
+                conf[key] = attrs[name][key]
+        gr.add_node(pydot.Node(name, **conf))
 
-    def edge_attr(edge):
-        return bd_conf["edge"]
-
+    # find groups
+    groups = {}
+    for n in sys._g.attrs["groups"].keys():
+        g = sys._g.attrs["groups"][n]
+        if g != "":
+            groups[g] = 1
+    # create clusters
+    if groups != {}:
+        for g in groups.keys():
+            cconf = copy.deepcopy(bd_conf["cluster"]["default"])
+            if g in bd_conf["cluster"]:
+                for key in bd_conf["cluster"][g]:
+                    cconf[key] = bd_conf["cluster"][g][key]
+            sg = pydot.Subgraph("cluster_" + g, label=g, **cconf)
+            for n in sys._g.attrs["nodes"]:
+                if sys._g.attrs["groups"][n] == g:
+                    # print(n)
+                    add_node(sg, n, bd_conf["node"])
+            graph.add_subgraph(sg)
+    # non-clustered nodes
+    for n in sys._g.attrs["nodes"]:
+        if sys._g.attrs["groups"][n] == "":
+            add_node(graph, n, bd_conf["node"])
+    # edges
+    p = dict(zip(sys._g.attrs["nodes"].values(), sys._g.attrs["nodes"].keys()))
+    for e in iter(sys._g.edge_indices()):
+        ep = sys._g.get_edge_endpoints_by_index(e)
+        graph.add_edge(pydot.Edge(p[ep[0]], p[ep[1]], **bd_conf["edge"]))
+    # output image
     if fname == None:
-        img_type = "png"
-    else:
-        img_type = fname.split(".")[-1]
-
-    bd_conf["graph"]["label"] = '"' + sys._g.attrs["name"] + '"'
-
-    return graphviz_draw(
-        sys._g,
-        node_attr_fn=node_attr,
-        edge_attr_fn=edge_attr,
-        graph_attr=bd_conf["graph"],
-        filename=fname,
-        image_type=img_type,
-    )
+        img = Image.open(io.BytesIO(graph.create_png(prog="dot")))
+        return img
+    graph.write(fname, prog="dot", format=fname.split(".")[-1])
+    return None

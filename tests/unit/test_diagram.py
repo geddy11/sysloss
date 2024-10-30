@@ -57,12 +57,14 @@ def test_case2():
             eff={"vi": [3.3], "io": [0.1, 0.5, 0.9], "eff": [[0.55, 0.78, 0.92]]},
         ),
     )
-    tsys.add_comp("Boost:5V", comp=RLoss("RC filter", rs=6.8))
+    tsys.add_comp("Boost:5V", comp=RLoss("RC filter", rs=6.8), group="filters")
     tsys.add_comp(
         "Boost:5V", comp=LinReg("LDO", vo=3.0, ig=0.001, limits={"io": [0, 1.0]})
     )
     tsys.add_comp("LDO", comp=PSwitch("P-switch", rs=0.01))
-    tsys.add_comp("P-switch", comp=ILoad("load 2", ii=0.2))
+    tsys.add_comp("P-switch", comp=ILoad("load 1", ii=0.2), group="loads")
+    tsys.add_comp("P-switch", comp=ILoad("load 2", ii=0.1), group="loads")
+    tsys.add_comp("P-switch", comp=ILoad("load 3", ii=0.07), group="loads")
     tsys.add_comp("RC filter", comp=RLoad("Sensor", rs=866))
     my_conf = get_conf()
     my_conf["node"]["Source"] = {"shape": "circle", "fillcolor": "coral"}
@@ -74,10 +76,12 @@ def test_case2():
     my_conf["node"]["RLoss"] = {"fillcolor": "deeppink"}
     my_conf["node"]["LinReg"] = {"fillcolor": "darkorchid1"}
     my_conf["node"]["PSwitch"] = {"fillcolor": "aquamarine"}
+    my_conf["node"]["load 2"] = {"shape": "octagon"}
     my_conf["edge"]["arrowhead"] = "none"
     my_conf["graph"]["rankdir"] = "LR"
+    my_conf["cluster"]["filters"] = {"fillcolor": "yellow"}
     assert make_diag(tsys) != None, "Check image generation"
-    ret = make_diag(tsys, fname="tests/unit/Test.svg")
+    ret = make_diag(tsys, fname="tests/unit/Test.svg", config=my_conf)
     assert ret == None, "Check diagram to file"
     assert os.path.exists("tests/unit/Test.svg") == True, "Check svg file creation"
     assert make_diag(tsys, config=my_conf) != None, "Check image generation with config"
