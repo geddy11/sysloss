@@ -1261,6 +1261,14 @@ class System:
         res["pwr (W)"] = pwr
         return pd.DataFrame(res)
 
+    def _get_applims(self, idx):
+        """Get applicable limits for component"""
+        lims = self._g[idx]._get_limits()
+        limits = {}
+        for lim in lims:
+            limits[lim] = _get_opt(self._g[idx]._limits, lim, LIMITS_DEFAULT[lim])
+        return limits
+
     def save(self, fname: str, *, indent: int = 4):
         """Save system as a .json file.
 
@@ -1299,14 +1307,14 @@ class System:
                             {
                                 "type": self._g[c]._component_type.name,
                                 "params": self._g[c]._params,
-                                "limits": self._g[c]._limits,
+                                "limits": self._get_applims(c),
                             }
                         ]
                     cdict[self._g[e]._params["name"]] = childs
             sys[root[r]] = {
                 "type": self._g[ridx[r]]._component_type.name,
                 "params": self._g[ridx[r]]._params,
-                "limits": self._g[ridx[r]]._limits,
+                "limits": self._get_applims(ridx[r]),
                 "childs": cdict,
             }
 

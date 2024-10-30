@@ -269,6 +269,13 @@ class _Component:
                     ret[param] = self._params[param]
         return ret
 
+    def _get_limits(self):
+        """Get list of applicable limits"""
+        lims = []
+        for key in LIMITS_DEFAULT:
+            lims += [key]
+        return lims
+
 
 class Source(_Component):
     """Voltage source.
@@ -364,6 +371,10 @@ class Source(_Component):
         return _get_warns(
             self._limits, {"io": io, "po": vo * io, "pl": self._params["rs"] * io * io}
         )
+
+    def _get_limits(self):
+        """Applicable limits"""
+        return ["io", "po", "pl"]
 
 
 class PLoad(_Component):
@@ -466,6 +477,10 @@ class PLoad(_Component):
         tp = tr + ta
         return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr, "tp": tp})
 
+    def _get_limits(self):
+        """Applicable limits"""
+        return ["vi", "ii", "tr", "tp"]
+
 
 class ILoad(PLoad):
     """Current load.
@@ -547,6 +562,10 @@ class ILoad(PLoad):
         tp = tr + ta
         return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr, "tp": tp})
 
+    def _get_limits(self):
+        """Applicable limits"""
+        return ["vi", "pi", "tr", "tp"]
+
 
 class RLoad(PLoad):
     """Resistive load.
@@ -622,6 +641,10 @@ class RLoad(PLoad):
         return _get_warns(
             self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr, "tp": tp}
         )
+
+    def _get_limits(self):
+        """Applicable limits"""
+        return ["vi", "ii", "pi", "tr", "tp"]
 
 
 class RLoss(_Component):
@@ -1080,6 +1103,10 @@ class Converter(_Component):
             "Input voltage (V)",
             "{} efficiency for Vo={}V".format(self._params["name"], self._params["vo"]),
         ]
+
+    def _get_limits(self):
+        """Applicable limits"""
+        return ["vi", "vo", "ii", "io", "pi", "po", "pl", "tr", "tp"]
 
 
 class LinReg(_Component):
