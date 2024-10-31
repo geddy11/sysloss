@@ -51,6 +51,12 @@ df = bts.solve()
 print(df)
 ```
 ![result](https://github.com/geddy11/sysloss/raw/main/docs/bts.png)
+```python
+from sysloss.diagram import make_diag
+
+make_diag(bts, fname="bts.png")
+```
+![tree](https://github.com/geddy11/sysloss/raw/main/docs/bts-tree.png)
 
 ## Documentation
 The [documentation](https://sysloss.readthedocs.io/en/latest/Getting%20started.html) includes tutorials in the form of Jupyter notebooks, located in docs/nb.

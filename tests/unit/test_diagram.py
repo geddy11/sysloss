@@ -21,19 +21,20 @@
 # SOFTWARE.
 
 import os
+import pytest
 from sysloss.system import System
 from sysloss.components import *
 from sysloss.diagram import get_conf, make_diag, _DEF_CONF
 
 
 def test_case1():
-    """Test get_config()"""
+    """Check get_config()"""
     conf = get_conf()
     assert conf == _DEF_CONF, "Default configuration"
 
 
 def test_case2():
-    """Test make_diag()"""
+    """Check make_diag()"""
     tsys = System("Test system", Source("CR2032", vo=3.0, rs=1))
     tsys.add_comp("CR2032", comp=VLoss("Diode", vdrop=0.35))
     tsys.add_comp(
