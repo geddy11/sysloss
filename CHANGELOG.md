@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## v1.6.0 (2024-10-31)
+
+### Bug Fixes
+
+* fix: when saving system to .json, only include applicable limits for each component ([`fd5dea7`](https://github.com/geddy11/sysloss/commit/fd5dea76bfb9e03d18106f2c69992e7a12fd7419))
+
+### Continuous Integration
+
+* ci: add sudo to graphviz install ([`20185f6`](https://github.com/geddy11/sysloss/commit/20185f6e94b00672bad6079fd369eeb2741be345))
+
+* ci: fix Graphviz install ([`a46675b`](https://github.com/geddy11/sysloss/commit/a46675bdd63934b41d9dc4f70d7ecde5ad1f7935))
+
+* ci: install Graphviz in ci step ([`eb026a2`](https://github.com/geddy11/sysloss/commit/eb026a2d8e73b1a08e5198ebdaf686cf772dabb6))
+
+* ci: add graphviz to rtd config ([`8fb1728`](https://github.com/geddy11/sysloss/commit/8fb1728f523243daa808063e6c6cf90dda831d31))
+
+* ci: remove grayscull steps ([`553c2ed`](https://github.com/geddy11/sysloss/commit/553c2eda3537c314a1fec18522488c57037d0fcd))
+
+### Documentation
+
+* docs: update LinReg ground current parameter name in PCIe tutorial ([`b9da44b`](https://github.com/geddy11/sysloss/commit/b9da44b76a3b8feeae9cead7eae2758a36881c65))
+
+### Features
+
+* feat: add group parameter in System, allowing grouping of components ([`83d9965`](https://github.com/geddy11/sysloss/commit/83d9965b9619d9d2748d9177dcbb07abdb81d91e))
+
+* feat: add graphical power tree diagrams module ([`e3bb445`](https://github.com/geddy11/sysloss/commit/e3bb445587c0f1daf6c46b4b451c85943cfa0e77))
+
+### Refactoring
+
+* refactor: use pydot in make_diagram() to support clusters (component groups) ([`6a53558`](https://github.com/geddy11/sysloss/commit/6a53558c52f3ee703d3f93837ec959d5819326d3))
+
+* refactor: remove duplicate code in Components ([`488d451`](https://github.com/geddy11/sysloss/commit/488d4514117e2a35c962d845d55522380e9f4048))
+
+* refactor: add generic component class ([`31873dd`](https://github.com/geddy11/sysloss/commit/31873dd3bf7dd3e320165aef00b7ce4e9071d215))
+
+
 ## v1.5.0 (2024-10-14)
 
 ### Documentation
@@ -31,6 +68,10 @@
 
 
 ## v1.4.0 (2024-09-02)
+
+### Bug Fixes
+
+* fix(system): add check of component name and set default load phase in change_comp() ([`1a06e47`](https://github.com/geddy11/sysloss/commit/1a06e47ad14e694451f97f6b84f6587c319c0e38))
 
 ### Build System
 
@@ -63,10 +104,6 @@
 * feat: add ambient temperature (ta) as new parameter to .solve() and peak temperature (tp) as a new limit
 
 If thermal resistance is specified on a component, peak temperature shows up as a new column in the results table. Peak temperature is calculated as ambient temperature plus temperature rise. ([`2e74afe`](https://github.com/geddy11/sysloss/commit/2e74afe4eeca521a4f6f95e488b7ea9321eb4ca2))
-
-### Fixes
-
-* fix(system): add check of component name and set default load phase in change_comp() ([`1a06e47`](https://github.com/geddy11/sysloss/commit/1a06e47ad14e694451f97f6b84f6587c319c0e38))
 
 ### Unknown
 
@@ -102,6 +139,10 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 ## v1.2.0 (2024-05-27)
 
+### Bug Fixes
+
+* fix(system): add correct title to LinReg interpolation data plots ([`8ade81d`](https://github.com/geddy11/sysloss/commit/8ade81ddf9ef29387db89157b6da3feb850c5514))
+
 ### Continuous Integration
 
 * ci: fix maintainer in conda receipe ([`1d27b0c`](https://github.com/geddy11/sysloss/commit/1d27b0c9c4f4411cf71c6efd29ffcecb38139e7c))
@@ -116,10 +157,6 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * feat(components): add interpolation option to LinReg ground current parameter ([`2393767`](https://github.com/geddy11/sysloss/commit/23937677641ce6d99bbdb065b43a50a88a0a7a62))
 
-### Fixes
-
-* fix(system): add correct title to LinReg interpolation data plots ([`8ade81d`](https://github.com/geddy11/sysloss/commit/8ade81ddf9ef29387db89157b6da3feb850c5514))
-
 ### Refactoring
 
 * refactor: system .params() method now gets component parameters from ._get_params() method ([`320fc09`](https://github.com/geddy11/sysloss/commit/320fc09d3ac5cd8a86f207ada78ddb73269dfa43))
@@ -132,6 +169,10 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 
 ## v1.1.1 (2024-05-22)
+
+### Bug Fixes
+
+* fix: print tree in .tree() method to make it show in terminal mode ([`d2b43e3`](https://github.com/geddy11/sysloss/commit/d2b43e31fded161c4122b1bb61ed1486b2ee4818))
 
 ### Build System
 
@@ -167,12 +208,12 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * docs: cleanup battery life notebook ([`2719bc5`](https://github.com/geddy11/sysloss/commit/2719bc5090a97e79d086f6e99fd68a8af5c328ea))
 
-### Fixes
-
-* fix: print tree in .tree() method to make it show in terminal mode ([`d2b43e3`](https://github.com/geddy11/sysloss/commit/d2b43e31fded161c4122b1bb61ed1486b2ee4818))
-
 
 ## v1.1.0 (2024-05-08)
+
+### Bug Fixes
+
+* fix: relax python version requirement to 3.10 ([`63acad9`](https://github.com/geddy11/sysloss/commit/63acad9c7d59c70534413ba676d056e7e9d6f405))
 
 ### Build System
 
@@ -188,10 +229,6 @@ If thermal resistance is specified on a component, peak temperature shows up as 
 
 * feat(system): new method .batt_life() to estimate battery lifetime ([`b48d429`](https://github.com/geddy11/sysloss/commit/b48d429a07c43de899f326e3b724de5e86b4e181))
 
-### Fixes
-
-* fix: relax python version requirement to 3.10 ([`63acad9`](https://github.com/geddy11/sysloss/commit/63acad9c7d59c70534413ba676d056e7e9d6f405))
-
 ### Unknown
 
 * Merge pull request #5 from geddy11/battsim
@@ -200,6 +237,10 @@ Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1
 
 
 ## v1.0.1 (2024-04-29)
+
+### Bug Fixes
+
+* fix: add __version__ to package ([`056c259`](https://github.com/geddy11/sysloss/commit/056c2593f93c453b18b0b962ca8500240f987bff))
 
 ### Build System
 
@@ -218,10 +259,6 @@ Battery life estimation ([`1f999f8`](https://github.com/geddy11/sysloss/commit/1
 * docs: rename code of conduct file ([`f8ce2bb`](https://github.com/geddy11/sysloss/commit/f8ce2bb3be5579a7b00519287efef30c627a7665))
 
 * docs: change README.md image links to github ([`852ca43`](https://github.com/geddy11/sysloss/commit/852ca4381b367c9eebf9bf4cbcab1959c25e5c50))
-
-### Fixes
-
-* fix: add __version__ to package ([`056c259`](https://github.com/geddy11/sysloss/commit/056c2593f93c453b18b0b962ca8500240f987bff))
 
 ### Unknown
 
