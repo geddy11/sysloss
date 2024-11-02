@@ -401,6 +401,9 @@ class Source(_Component):
 class PLoad(_Component):
     """Power load.
 
+    A power load represents a constant power sink, referenced to 0V. Other components can not be connected to a PLoad.
+    The load can optionally be configured as a loss.
+
     Parameters
     ----------
     name : str
@@ -413,6 +416,8 @@ class PLoad(_Component):
         Load sleep power (W), by default 0.0.
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
+    loss: bool, optional
+        Count power as a loss, by default False
 
     Raises
     ------
@@ -439,6 +444,7 @@ class PLoad(_Component):
         limits: dict = LIMITS_DEFAULT,
         pwrs: float = 0.0,
         rt: float = 0.0,
+        loss: bool = False,
     ):
         self._params = {}
         self._params["name"] = name
@@ -447,6 +453,7 @@ class PLoad(_Component):
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
         self._ipr = None
+        self._params["loss"] = loss
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -466,7 +473,8 @@ class PLoad(_Component):
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         pwrs = _get_opt(config["pload"], "pwrs", PWRS_DEFAULT)
         rt = _get_opt(config["pload"], "rt", RT_DEFAULT)
-        return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt)
+        loss = _get_opt(config["pload"], "loss", False)
+        return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt, loss=loss)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -490,9 +498,15 @@ class PLoad(_Component):
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in component"""
         if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
-            return 0.0, 0.0, 100.0, 0.0, 0.0
+            if self._params["loss"]:
+                return 0.0, 0.0, 0.0, 0.0, 0.0
+            else:
+                return 0.0, 0.0, 100.0, 0.0, 0.0
         tr = abs(vi * ii) * self._params["rt"]
-        return abs(vi * ii), 0.0, 100.0, tr, tr + ta
+        if self._params["loss"]:
+            return 0.0, abs(vi * ii), 0.0, tr, tr + ta
+        else:
+            return abs(vi * ii), 0.0, 100.0, tr, tr + ta
 
     def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
         """Check limits"""
@@ -511,6 +525,9 @@ class PLoad(_Component):
 class ILoad(PLoad):
     """Current load.
 
+    A current load represents a constant current sink, referenced to 0V. Other components can not be connected to an ILoad.
+    The load can optionally be configured as a loss.
+
     Parameters
     ----------
     name : str
@@ -523,6 +540,8 @@ class ILoad(PLoad):
         Load sleep current (A), by default 0.0.
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
+    loss: bool, optional
+        Count power as a loss, by default False
 
     Raises
     ------
@@ -539,6 +558,7 @@ class ILoad(PLoad):
         limits: dict = LIMITS_DEFAULT,
         iis: float = 0.0,
         rt: float = 0.0,
+        loss: bool = False,
     ):
         self._params = {}
         self._params["name"] = name
@@ -547,6 +567,7 @@ class ILoad(PLoad):
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
         self._ipr = None
+        self._params["loss"] = loss
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -566,7 +587,8 @@ class ILoad(PLoad):
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         iis = _get_opt(config["iload"], "iis", IIS_DEFAULT)
         rt = _get_opt(config["iload"], "rt", RT_DEFAULT)
-        return cls(name, ii=i, limits=lim, iis=iis, rt=rt)
+        loss = _get_opt(config["iload"], "loss", False)
+        return cls(name, ii=i, limits=lim, iis=iis, rt=rt, loss=loss)
 
     def _get_inp_current(self, phase, phase_conf={}):
         """Get initial current value for solver"""
@@ -601,6 +623,9 @@ class ILoad(PLoad):
 class RLoad(PLoad):
     """Resistive load.
 
+    A resisitve load represents a constant resistance, referenced to 0V. Other components can not be connected to an RLoad.
+    The load can optionally be configured as a loss.
+
     Parameters
     ----------
     name : str
@@ -611,11 +636,13 @@ class RLoad(PLoad):
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
          Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr, tp
+    loss: bool, optional
+        Count power as a loss, by default False
 
     Raises
     ------
     ValueError
-        If a limits value is not of the correct format.
+        If rs==0.0 or a limits value is not of the correct format.
 
     """
 
@@ -626,6 +653,7 @@ class RLoad(PLoad):
         rs: float,
         rt: float = 0.0,
         limits: dict = LIMITS_DEFAULT,
+        loss: bool = False,
     ):
         self._params = {}
         self._params["name"] = name
@@ -635,6 +663,7 @@ class RLoad(PLoad):
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
         self._ipr = None
+        self._params["loss"] = loss
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -653,7 +682,8 @@ class RLoad(PLoad):
         r = _get_mand(config["rload"], "rs")
         lim = _get_opt(config, "limits", LIMITS_DEFAULT)
         rt = _get_opt(config["rload"], "rt", RT_DEFAULT)
-        return cls(name, rs=r, rt=rt, limits=lim)
+        loss = _get_opt(config["rload"], "loss", False)
+        return cls(name, rs=r, rt=rt, limits=lim, loss=loss)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
@@ -686,7 +716,7 @@ class RLoad(PLoad):
 class RLoss(_Component):
     """Resistive series loss.
 
-    This loss element is connected in series with other elements.
+    A series resisitve loss represents a constant resistance connected in series with other components.
 
     Parameters
     ----------
@@ -804,7 +834,7 @@ class RLoss(_Component):
 class VLoss(RLoss):
     """Voltage series loss.
 
-    This loss element is connected in series with other elements.
+    This voltage loss element is connected in series with other elements.
     The voltage drop can be either a constant (float) or interpolated.
     Interpolation data dict for voltage drop can be either 1D (function of output current only):
 

@@ -1,5 +1,6 @@
 [pload]
 pwr = 27.0e-3
+loss = false
 
 [limits]
 vi = [ 0.0, 1000000.0,]

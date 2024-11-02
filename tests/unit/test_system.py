@@ -79,7 +79,7 @@ def test_case1():
         dfp[dfp.Component == "1.8V buck"]["eff (%)"].tolist()[0] == "interp"
     ), "Case parameters interpolator"
     dfl = case1.limits()
-    assert dfl.shape[1] == 3 + len(LIMITS_DEFAULT), "Case 1 limits column count"
+    assert dfl.shape[1] == 2 + len(LIMITS_DEFAULT), "Case 1 limits column count"
 
     # reload system from json
     case1b = System.from_file("tests/unit/case1.json")

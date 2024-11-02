@@ -1,5 +1,6 @@
 [iload]
 ii = 0.015
+loss = true
 
 [limits]
 vi = [ 0.0, 1000000.0,]

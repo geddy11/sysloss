@@ -77,7 +77,7 @@ def test_pload():
 
 def test_iload():
     """Check ILoad component"""
-    ia = ILoad("Load 1", ii=15e-3)
+    ia = ILoad("Load 1", ii=15e-3, loss=True)
     assert ia._component_type == _ComponentTypes.LOAD, "ILoad component type"
     assert list(ia._child_types) == [None], "ILoad child types"
     ib = ILoad.from_file("Load 1", fname="tests/data/iload.toml")

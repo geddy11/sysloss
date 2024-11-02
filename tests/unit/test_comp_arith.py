@@ -61,6 +61,9 @@ def close(a, b):
     return np.allclose([a], [b])
 
 
+#
+# Source
+#
 @pytest.fixture()
 def source(name, vo, rs):
     """Return a Source object."""
@@ -113,6 +116,9 @@ def test_source(source, name, vo, rs):
             assert close(eff, eeff), "Check Source efficiency"
 
 
+#
+# RLoss
+#
 @pytest.fixture()
 def rloss(name, rs, rt):
     """Return a RLoss object."""
@@ -178,6 +184,9 @@ def test_rloss(rloss, name, rs, rt):
                 assert close(tp, -55.0 + eloss * rt), "Check RLoss peak temperature"
 
 
+#
+# VLoss
+#
 @pytest.fixture()
 def vloss(name, vdrop, rt):
     """Return a VLoss object."""
@@ -243,21 +252,27 @@ def test_vloss(vloss, name, vdrop, rt):
                 assert close(tp, 85.0 + los * rt), "Check VLoss peak temperature"
 
 
+#
+# PLoad
+#
 @pytest.fixture()
-def pload(name, pwr, pwrs, rt, phase_loads):
+def pload(name, pwr, pwrs, rt, loss, phase_loads):
     """Return a PLoad object."""
-    return PLoad(name, pwr=pwr, pwrs=pwrs, rt=rt)
+    return PLoad(name, pwr=pwr, pwrs=pwrs, rt=rt, loss=loss)
 
 
 @pytest.mark.parametrize(
-    "name, pwr, pwrs, rt, phase_loads",
+    "name, pwr, pwrs, rt, loss, phase_loads",
     [
-        ("No phase", 0.5, 0.001, 10.0, {}),
-        ("On-phase", 0.5, 0.1, 3.5, {"Apple": 0.78}),
-        ("Off-phase", 0.65, 0.13, 5.0, {"Pear": 0.9}),
+        ("No phase", 0.5, 0.001, 10.0, False, {}),
+        ("On-phase", 0.5, 0.1, 3.5, False, {"Apple": 0.78}),
+        ("Off-phase", 0.65, 0.13, 5.0, False, {"Pear": 0.9}),
+        ("No phase", 0.5, 0.001, 10.0, True, {}),
+        ("On-phase", 0.5, 0.1, 3.5, True, {"Apple": 0.78}),
+        ("Off-phase", 0.65, 0.13, 5.0, True, {"Pear": 0.9}),
     ],
 )
-def test_pload(pload, name, pwr, pwrs, rt, phase_loads):
+def test_pload(pload, name, pwr, pwrs, rt, loss, phase_loads):
     """Test PLoad object with different parameters"""
     assert pload._params["name"] == name
 
@@ -292,33 +307,44 @@ def test_pload(pload, name, pwr, pwrs, rt, phase_loads):
     for plt in PWR_LOSS_TESTS:
         for s in VINOFF_STATES:
             state["off"] = s
-            pwr, loss, eff, tr, tp = pload._solv_pwr_loss(
+            pwr, ploss, eff, tr, tp = pload._solv_pwr_loss(
                 plt[0], plt[1], plt[2], plt[3], 19.7, plt[4], phase_loads, state
             )
             epwr = 0.0 if plt[0] == 0.0 or s else abs(plt[0] * plt[2])
-            assert close(pwr, epwr), "Check PLoad power"
-            assert 0.0 == loss, "Check PLoad loss"
-            assert 100.0 == eff, "Check PLoad efficiency"
+            if not loss:
+                assert close(pwr, epwr), "Check PLoad power"
+                assert 0.0 == ploss, "Check PLoad loss"
+                assert 100.0 == eff, "Check PLoad efficiency"
+            else:
+                assert close(ploss, epwr), "Check PLoad loss (loss mode)"
+                assert 0.0 == pwr, "Check PLoad power (loss mode)"
+                assert 0.0 == eff, "Check PLoad efficiency (loss mode)"
             assert close(tr, epwr * rt), "Check PLoad temperature rise"
             if epwr * rt > 0.0:
-                assert close(tp, 19.7 + epwr * rt), "Check VLoss peak temperature"
+                assert close(tp, 19.7 + epwr * rt), "Check PLoad peak temperature"
 
 
+#
+# ILoad
+#
 @pytest.fixture()
-def iload(name, ii, iis, rt, phase_loads):
+def iload(name, ii, iis, rt, loss, phase_loads):
     """Return a ILoad object."""
-    return ILoad(name, ii=ii, iis=iis, rt=rt)
+    return ILoad(name, ii=ii, iis=iis, rt=rt, loss=loss)
 
 
 @pytest.mark.parametrize(
-    "name, ii, iis, rt, phase_loads",
+    "name, ii, iis, rt, loss, phase_loads",
     [
-        ("No phase", 0.5, 0.001, 12.0, {}),
-        ("On-phase", 0.5, 0.1, 11.66, {"Apple": 0.78}),
-        ("Off-phase", 0.65, 0.13, 0.05, {"Pear": 0.9}),
+        ("No phase", 0.5, 0.001, 12.0, False, {}),
+        ("On-phase", 0.5, 0.1, 11.66, False, {"Apple": 0.78}),
+        ("Off-phase", 0.65, 0.13, 0.05, False, {"Pear": 0.9}),
+        ("No phase", 0.5, 0.001, 12.0, True, {}),
+        ("On-phase", 0.5, 0.1, 11.66, True, {"Apple": 0.78}),
+        ("Off-phase", 0.65, 0.13, 0.05, True, {"Pear": 0.9}),
     ],
 )
-def test_iload(iload, name, ii, iis, rt, phase_loads):
+def test_iload(iload, name, ii, iis, rt, loss, phase_loads):
     """Test ILoad object with different parameters"""
     assert iload._params["name"] == name
 
@@ -351,33 +377,44 @@ def test_iload(iload, name, ii, iis, rt, phase_loads):
     for plt in PWR_LOSS_TESTS:
         for s in VINOFF_STATES:
             state["off"] = s
-            pwr, loss, eff, tr, tp = iload._solv_pwr_loss(
+            pwr, ploss, eff, tr, tp = iload._solv_pwr_loss(
                 plt[0], plt[1], plt[2], plt[3], -43.0, plt[4], phase_loads, state
             )
             epwr = 0.0 if plt[0] == 0.0 or s else abs(plt[0] * plt[2])
-            assert close(pwr, epwr), "Check ILoad power"
-            assert 0.0 == loss, "Check ILoad loss"
-            assert 100.0 == eff, "Check ILoad efficiency"
+            if not loss:
+                assert close(pwr, epwr), "Check ILoad power"
+                assert 0.0 == ploss, "Check ILoad loss"
+                assert 100.0 == eff, "Check ILoad efficiency"
+            else:
+                assert close(ploss, epwr), "Check ILoad loss (loss mode)"
+                assert 0.0 == pwr, "Check ILoad power (loss mode)"
+                assert 0.0 == eff, "Check ILoad efficiency (loss mode)"
             assert close(tr, epwr * rt), "Check ILoad temperature rise"
             if epwr * rt > 0.0:
                 assert close(tp, -43.0 + epwr * rt), "Check ILoad peak temperature"
 
 
+#
+# RLoad
+#
 @pytest.fixture()
-def rload(name, rs, rt, phase_loads):
+def rload(name, rs, rt, loss, phase_loads):
     """Return a RLoad object."""
-    return RLoad(name, rs=rs, rt=rt)
+    return RLoad(name, rs=rs, rt=rt, loss=loss)
 
 
 @pytest.mark.parametrize(
-    "name, rs, rt, phase_loads",
+    "name, rs, rt, loss, phase_loads",
     [
-        ("No phase", 12, 0.77, {}),
-        ("On-phase", 27, 45.9, {"Apple": 33, "Orange": 47}),
-        ("Off-phase", 150, 200.0, {"Pear": 190}),
+        ("No phase", 12, 0.77, False, {}),
+        ("On-phase", 27, 45.9, False, {"Apple": 33, "Orange": 47}),
+        ("Off-phase", 150, 200.0, False, {"Pear": 190}),
+        ("No phase", 12, 0.77, True, {}),
+        ("On-phase", 27, 45.9, True, {"Apple": 33, "Orange": 47}),
+        ("Off-phase", 150, 200.0, True, {"Pear": 190}),
     ],
 )
-def test_rload(rload, name, rs, rt, phase_loads):
+def test_rload(rload, name, rs, rt, loss, phase_loads):
     """Test RLoad object with different parameters"""
     assert rload._params["name"] == name
 
@@ -412,18 +449,26 @@ def test_rload(rload, name, rs, rt, phase_loads):
     for plt in PWR_LOSS_TESTS:
         for s in VINOFF_STATES:
             state["off"] = s
-            pwr, loss, eff, tr, tp = rload._solv_pwr_loss(
+            pwr, ploss, eff, tr, tp = rload._solv_pwr_loss(
                 plt[0], plt[1], plt[2], plt[3], 55.7, plt[4], phase_loads, state
             )
             epwr = 0.0 if plt[0] == 0.0 or s else abs(plt[0] * plt[2])
-            assert close(pwr, epwr), "Check RLoad power"
-            assert 0.0 == loss, "Check RLoad loss"
-            assert 100.0 == eff, "Check RLoad efficiency"
+            if not loss:
+                assert close(pwr, epwr), "Check RLoad power"
+                assert 0.0 == loss, "Check RLoad loss"
+                assert 100.0 == eff, "Check RLoad efficiency"
+            else:
+                assert close(ploss, epwr), "Check RLoad loss (loss mode)"
+                assert 0.0 == pwr, "Check RLoad power (loss mode)"
+                assert 0.0 == eff, "Check RLoad efficiency (loss mode)"
             assert close(tr, epwr * rt), "Check RLoad temperature rise"
             if epwr * rt > 0.0:
                 assert close(tp, 55.7 + epwr * rt), "Check RLoad peak temperature"
 
 
+#
+# Converter
+#
 @pytest.fixture()
 def converter(name, vo, eff, iq, iis, rt, active_phases):
     """Return a Converter object."""
@@ -515,6 +560,9 @@ def test_converter(converter, name, vo, eff, iq, iis, rt, active_phases):
                 assert close(tp, 0.0 + eloss * rt), "Check Converter peak temperature"
 
 
+#
+# LinReg
+#
 @pytest.fixture()
 def linreg(name, vo, vdrop, ig, iis, rt, active_phases):
     """Return a LinReg object."""
@@ -603,6 +651,9 @@ def test_linreg(linreg, name, vo, vdrop, ig, iis, rt, active_phases):
                 assert close(tp, 125.0 + eloss * rt), "Check LinReg peak temperature"
 
 
+#
+# PSwitch
+#
 @pytest.fixture()
 def pswitch(name, rs, ig, iis, rt, active_phases):
     """Return a PSwitch object."""
