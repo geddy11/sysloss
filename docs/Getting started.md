@@ -1,5 +1,5 @@
 # Welcome to sysLoss
-*sysLoss* is a tool for analyzing system power and losses. From the smallest IoT sensor to large industrial installations. The tool is efficient and easy to use, the analysis result provides a detailed report on voltages, currents, power and efficiency for every component defined in the system. Output format is Pandas DataFrame: Create charts, plots and export to Excel and other formats. 
+`sysLoss` is a tool for analyzing system power and losses. From the smallest IoT sensor to large industrial installations. The tool is efficient and easy to use, the analysis result provides a detailed report on voltages, currents, power and efficiency for every component defined in the system. Output format is Pandas DataFrame: Create charts, plots and export to Excel and other formats. 
 
 ## Installation
 To get started with *sysLoss*, install the python package from PyPI with:
@@ -44,8 +44,16 @@ bts.solve()
 ```
 ![result](bts.png)
 
+`sysLoss` can also produce graphical power tree diagrams:
+```python
+import sysloss.diagram as sd
+
+sd.make_diag(bts, fname="bts.png")
+```
+![tree](bts-tree.png)
+
 ## Next step
-The best way to learn *sysLoss* is to explore the tutorials section. The tutorials are Jupyter Notebooks that can also be found in the GitHub repository under docs/nb.
+The best way to learn `sysLoss` is to explore the tutorials section. The tutorials are Jupyter Notebooks that can also be found in the GitHub repository under docs/nb.
 
 
 ```{tableofcontents}

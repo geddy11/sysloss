@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/geddy11/sysloss"
 repository = "https://github.com/geddy11/sysloss"
 documentation = "https://sysloss.readthedocs.io/en/latest/Getting%20started.html#"
-keywords = ["system", "power" , "loss", "efficiency", "energy", "component", "battery"]
+keywords = ["system", "power" , "tree", "loss", "efficiency", "energy", "board", "component", "battery"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

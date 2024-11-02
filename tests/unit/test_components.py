@@ -39,10 +39,12 @@ def test_classes():
     assert issubclass(Source, _ComponentInterface), "subclass Source"
     assert issubclass(ILoad, _ComponentInterface), "subclass ILoad"
     assert issubclass(PLoad, _ComponentInterface), "subclass PLoad"
+    assert issubclass(RLoad, _ComponentInterface), "subclass RLoad"
     assert issubclass(RLoss, _ComponentInterface), "subclass SLoss"
     assert issubclass(VLoss, _ComponentInterface), "subclass SLoss"
     assert issubclass(Converter, _ComponentInterface), "subclass Converter"
     assert issubclass(LinReg, _ComponentInterface), "subclass LinReg"
+    assert issubclass(PSwitch, _ComponentInterface), "subclass PSwitch"
 
 
 def test_source():
@@ -54,6 +56,12 @@ def test_source():
     assert sa._params == sb._params, "Source parameters from file"
     assert sa._limits == sb._limits, "Source limits from file"
     assert isinstance(sa, _ComponentInterface), "instance Source"
+    with pytest.raises(ValueError):
+        sc = Source("Battery", vo=14.7, rs=3e-3, limits={"io": "invalid"})
+    with pytest.raises(ValueError):
+        sc = Source("Battery", vo=14.7, rs=3e-3, limits={"io": [1]})
+    with pytest.raises(ValueError):
+        sc = Source("Battery", vo=14.7, rs=3e-3, limits={"io": [1, 2, 3]})
 
 
 def test_pload():

@@ -135,6 +135,22 @@ def _calc_inp_current(vo, i, pstate):
     return i
 
 
+def _check_limits(limits: dict):
+    """Check that limits are valid format"""
+    for key in LIMITS_DEFAULT:
+        if key in limits:
+            if type(limits[key]) is not list:
+                raise ValueError('"{}" value is not a list!'.format(key))
+            else:
+                if len(limits[key]) != 2 or not (
+                    all(isinstance(item, (int, float)) for item in limits[key])
+                ):
+                    raise ValueError(
+                        '"{}" value is not a list of two numbers!'.format(key)
+                    )
+    return limits
+
+
 class _Interp0d:
     """Dummy interpolator for constant"""
 
@@ -293,6 +309,11 @@ class Source(_Component):
     limits : dict, optional
         Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: io, po, pl.
 
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
+
     """
 
     @property
@@ -320,7 +341,7 @@ class Source(_Component):
         self._params["vo"] = vo
         self._params["rs"] = abs(rs)
         self._params["rt"] = 0.0
-        self._limits = limits
+        self._limits = _check_limits(limits)
         self._ipr = None
 
     @classmethod
@@ -393,6 +414,11 @@ class PLoad(_Component):
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
 
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
+
     """
 
     @property
@@ -419,7 +445,7 @@ class PLoad(_Component):
         self._params["pwr"] = abs(pwr)
         self._params["pwrs"] = abs(pwrs)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
         self._ipr = None
 
     @classmethod
@@ -498,6 +524,11 @@ class ILoad(PLoad):
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
 
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
+
     """
 
     def __init__(
@@ -512,7 +543,7 @@ class ILoad(PLoad):
         self._params = {}
         self._params["name"] = name
         self._params["ii"] = abs(ii)
-        self._limits = limits
+        self._limits = _check_limits(limits)
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
         self._ipr = None
@@ -581,6 +612,11 @@ class RLoad(PLoad):
     limits : dict, optional
          Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, ii, pi, tr, tp
 
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
+
     """
 
     def __init__(
@@ -597,7 +633,7 @@ class RLoad(PLoad):
             raise ValueError("rs must be > 0!")
         self._params["rs"] = abs(rs)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
         self._ipr = None
 
     @classmethod
@@ -648,7 +684,7 @@ class RLoad(PLoad):
 
 
 class RLoss(_Component):
-    """Resistive loss.
+    """Resistive series loss.
 
     This loss element is connected in series with other elements.
 
@@ -662,6 +698,11 @@ class RLoss(_Component):
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
          Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
+
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
 
     """
 
@@ -689,7 +730,7 @@ class RLoss(_Component):
         self._params["name"] = name
         self._params["rs"] = abs(rs)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
         self._ipr = None
 
     @classmethod
@@ -761,7 +802,7 @@ class RLoss(_Component):
 
 
 class VLoss(RLoss):
-    """Voltage loss.
+    """Voltage series loss.
 
     This loss element is connected in series with other elements.
     The voltage drop can be either a constant (float) or interpolated.
@@ -783,6 +824,11 @@ class VLoss(RLoss):
         Thermal resistance (°C/W), by default 0.0.
     limits : dict, optional
          Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
+
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
 
     """
 
@@ -826,7 +872,7 @@ class VLoss(RLoss):
         else:
             self._params["vdrop"] = abs(vdrop)
             self._ipr = _Interp0d(abs(vdrop))
-        self._limits = limits
+        self._limits = _check_limits(limits)
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -921,7 +967,7 @@ class Converter(_Component):
     Raises
     ------
     ValueError
-        If efficiency is 0.0 or > 1.0.
+        If efficiency is 0.0 or > 1.0 or limit value has invalid format.
 
     """
 
@@ -978,7 +1024,7 @@ class Converter(_Component):
         self._params["iq"] = abs(iq)
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -1145,7 +1191,7 @@ class LinReg(_Component):
     Raises
     ------
     ValueError
-        If vdrop > vo.
+        If vdrop > vo or limit value has invalid format.
 
     """
 
@@ -1210,7 +1256,7 @@ class LinReg(_Component):
         self._params["ig"] = igc
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
@@ -1378,6 +1424,11 @@ class PSwitch(_Component):
     rt : float, optional
         Thermal resistance (°C/W), by default 0.0.
 
+    Raises
+    ------
+    ValueError
+        If a limits value is not of the correct format.
+
     """
 
     @property
@@ -1425,7 +1476,7 @@ class PSwitch(_Component):
         self._params["ig"] = ig
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
-        self._limits = limits
+        self._limits = _check_limits(limits)
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
