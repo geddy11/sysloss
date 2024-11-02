@@ -203,26 +203,40 @@ class System:
                                     ),
                                 )
                         elif c["type"] == "LOAD":
+                            loss = _get_opt(c["params"], "loss", False)
                             if "pwr" in c["params"]:
                                 pwr = _get_mand(c["params"], "pwr")
                                 pwrs = _get_opt(c["params"], "pwrs", 0.0)
                                 self.add_comp(
                                     p,
                                     comp=PLoad(
-                                        cname, pwr=pwr, limits=limits, pwrs=pwrs, rt=rt
+                                        cname,
+                                        pwr=pwr,
+                                        limits=limits,
+                                        pwrs=pwrs,
+                                        rt=rt,
+                                        loss=loss,
                                     ),
                                 )
                             elif "rs" in c["params"]:
                                 rs = _get_mand(c["params"], "rs")
                                 self.add_comp(
-                                    p, comp=RLoad(cname, rs=rs, rt=rt, limits=limits)
+                                    p,
+                                    comp=RLoad(
+                                        cname, rs=rs, rt=rt, limits=limits, loss=loss
+                                    ),
                                 )
                             else:
                                 ii = _get_mand(c["params"], "ii")
                                 self.add_comp(
                                     p,
                                     comp=ILoad(
-                                        cname, ii=ii, limits=limits, iis=iis, rt=rt
+                                        cname,
+                                        ii=ii,
+                                        limits=limits,
+                                        iis=iis,
+                                        rt=rt,
+                                        loss=loss,
                                     ),
                                 )
                         elif c["type"] == "PSWITCH":
