@@ -968,7 +968,7 @@ class System:
     ) -> pd.DataFrame:
         """Return component parameters and limits"""
         self._rel_update()
-        names, typ, parent, vo, vdrop, ig, loss = [], [], [], [], [], [], []
+        names, typ, vo, vdrop, ig, loss = [], [], [], [], [], []
         iq, rs, rt, eff, ii, pwr, iis, ltr, ltp = [], [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         lvd = []
@@ -982,7 +982,6 @@ class System:
                 dname = self._g[n]._params["name"]
                 src_cnt += 1
             domain += [dname]
-            # parent += [self._get_parent_name(n)]
             if params:
                 pdict = {
                     "vo": "",
@@ -1026,7 +1025,6 @@ class System:
         res = {}
         res["Component"] = names
         res["Type"] = typ
-        # res["Parent"] = parent
         if src_cnt > 1:
             res["Domain"] = domain
         if params:

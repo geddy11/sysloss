@@ -292,6 +292,30 @@ class _Component:
             lims += [key]
         return lims
 
+    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf):
+        """Check for warnings"""
+        if self._component_type not in [_ComponentTypes.SOURCE, _ComponentTypes.SLOSS]:
+            if phase_conf:
+                if phase not in phase_conf:
+                    return ""
+        pi, pl, _, tr, tp = self._solv_pwr_loss(vi, vo, ii, io, ta, phase, phase_conf)
+        all_lims = {
+            "vi": vi,
+            "vo": vo,
+            "vd": abs(vi) - abs(vo),
+            "ii": ii,
+            "io": io,
+            "pi": pi,
+            "po": pi - pl,
+            "pl": pl,
+            "tr": tr,
+            "tp": tp,
+        }
+        lims = {}
+        for lim in self._get_limits():
+            lims[lim] = all_lims[lim]
+        return _get_warns(self._limits, lims)
+
 
 class Source(_Component):
     """Voltage source.
@@ -386,12 +410,6 @@ class Source(_Component):
         loss = self._params["rs"] * io * io
         opwr = ipwr - loss
         return ipwr, loss, _get_eff(ipwr, opwr), 0.0, 0.0
-
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        return _get_warns(
-            self._limits, {"io": io, "po": vo * io, "pl": self._params["rs"] * io * io}
-        )
 
     def _get_limits(self):
         """Applicable limits"""
@@ -508,15 +526,6 @@ class PLoad(_Component):
         else:
             return abs(vi * ii), 0.0, 100.0, tr, tr + ta
 
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        if phase_conf and phase != "":
-            if phase not in phase_conf:
-                return ""
-        tr = vi * ii * self._params["rt"]
-        tp = tr + ta
-        return _get_warns(self._limits, {"vi": vi, "ii": ii, "tr": tr, "tp": tp})
-
     def _get_limits(self):
         """Applicable limits"""
         return ["vi", "ii", "tr", "tp"]
@@ -606,15 +615,6 @@ class ILoad(PLoad):
 
         return abs(i)
 
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        if phase_conf and phase != "":
-            if phase not in phase_conf:
-                return ""
-        tr = vi * ii * self._params["rt"]
-        tp = tr + ta
-        return _get_warns(self._limits, {"vi": vi, "pi": vi * ii, "tr": tr, "tp": tp})
-
     def _get_limits(self):
         """Applicable limits"""
         return ["vi", "pi", "tr", "tp"]
@@ -696,17 +696,6 @@ class RLoad(PLoad):
         else:
             r = phase_conf[phase]
         return abs(vi) / r
-
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        if phase_conf and phase != "":
-            if phase not in phase_conf:
-                return ""
-        tr = vi * ii * self._params["rt"]
-        tp = tr + ta
-        return _get_warns(
-            self._limits, {"vi": vi, "ii": ii, "pi": vi * ii, "tr": tr, "tp": tp}
-        )
 
     def _get_limits(self):
         """Applicable limits"""
@@ -808,27 +797,6 @@ class RLoss(_Component):
         pwr = abs(vi * ii)
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), tr, ta + tr
-
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf={}):
-        """Check limits"""
-        pl = abs(vi) * ii - abs(vo) * io
-        tr = pl * self._params["rt"]
-        tp = tr + ta
-        return _get_warns(
-            self._limits,
-            {
-                "vi": vi,
-                "vo": vo,
-                "vd": abs(vi - vo),
-                "ii": ii,
-                "io": io,
-                "pi": abs(vi * ii),
-                "po": abs(vo * io),
-                "pl": pl,
-                "tr": tr,
-                "tp": tp,
-            },
-        )
 
 
 class VLoss(RLoss):
@@ -1140,30 +1108,6 @@ class Converter(_Component):
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
 
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
-        """Check limits"""
-        if phase_conf:
-            if phase not in phase_conf:
-                return ""
-        pi, pl, _, tr, tp = self._solv_pwr_loss(
-            vi, vo, ii, io, ta, phase, phase_conf=[]
-        )
-        tp = tr + ta
-        return _get_warns(
-            self._limits,
-            {
-                "vi": vi,
-                "vo": vo,
-                "ii": ii,
-                "io": io,
-                "pi": pi,
-                "po": pi - pl,
-                "pl": pl,
-                "tr": tr,
-                "tp": tp,
-            },
-        )
-
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
@@ -1383,31 +1327,6 @@ class LinReg(_Component):
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
 
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
-        """Check limits"""
-        if phase_conf:
-            if phase not in phase_conf:
-                return ""
-        pi, pl, _, tr, tp = self._solv_pwr_loss(
-            vi, vo, ii, io, ta, phase, phase_conf=[]
-        )
-        tp = tr + ta
-        return _get_warns(
-            self._limits,
-            {
-                "vi": vi,
-                "vo": vo,
-                "vd": abs(vi - vo),
-                "ii": ii,
-                "io": io,
-                "pi": pi,
-                "po": pi - pl,
-                "pl": pl,
-                "tr": tr,
-                "tp": tp,
-            },
-        )
-
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
@@ -1580,31 +1499,6 @@ class PSwitch(_Component):
             pwr = abs(self._params["iis"] * vi)
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
-
-    def _solv_get_warns(self, vi, vo, ii, io, ta, phase, phase_conf=[]):
-        """Check limits"""
-        if phase_conf:
-            if phase not in phase_conf:
-                return ""
-        pi, pl, _, tr, tp = self._solv_pwr_loss(
-            vi, vo, ii, io, ta, phase, phase_conf=[]
-        )
-        tp = tr + ta
-        return _get_warns(
-            self._limits,
-            {
-                "vi": vi,
-                "vo": vo,
-                "vd": abs(vi - vo),
-                "ii": ii,
-                "io": io,
-                "pi": pi,
-                "po": pi - pl,
-                "pl": pl,
-                "tr": tr,
-                "tp": tp,
-            },
-        )
 
     def _get_annot(self):
         """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
