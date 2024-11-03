@@ -32,7 +32,9 @@ from sysloss.components import LIMITS_DEFAULT
 
 def test_case1():
     """Check system consisting of all component types"""
-    case1 = System("Case1 system", Source("3V coin", vo=3, rs=13e-3), group="42")
+    case1 = System(
+        "Case1 system", Source("3V coin", vo=3, rs=13e-3), group="42", rail="SYS_3V"
+    )
     case1.add_comp("3V coin", comp=Converter("1.8V buck", vo=1.8, eff=0.87, iq=12e-6))
     case1.add_comp("1.8V buck", comp=PLoad("MCU", pwr=27e-3))
     case1.add_comp("3V coin", comp=Converter("5V boost", vo=5, eff=0.91, iq=42e-6))
@@ -41,9 +43,12 @@ def test_case1():
         parent="5V boost", comp=RLoss("RC filter", rs=33.0, limits={"io": [0.0, 1.0]})
     )
     case1.add_comp(parent="RC filter", comp=VLoss("Diode", vdrop=0.17))
-    case1.add_comp("Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, ig=150e-6))
+    case1.add_comp(
+        "Diode", comp=LinReg("LDO 2.5V", vo=2.5, vdrop=0.27, ig=150e-6), rail="IO_2V5"
+    )
     case1.add_comp("LDO 2.5V", comp=PLoad("ADC", pwr=15e-3), group="AFE")
-    case1.add_comp("5V boost", comp=RLoad("Res divider", rs=200e3))
+    with pytest.warns(UserWarning):
+        case1.add_comp("5V boost", comp=RLoad("Res divider", rs=200e3), rail="invalid")
     case1.add_comp("5V boost", comp=PSwitch("Load switch", rs=150e-3))
     case1.add_comp("Load switch", comp=PLoad("MCU 2", pwr=0.12))
     with pytest.raises(RuntimeError):
@@ -51,10 +56,10 @@ def test_case1():
     df = case1.solve(quiet=False)
     rows = 13
     assert df.shape[0] == rows, "Case1 solution row count"
-    assert df.shape[1] == 12, "Case1 solution column count"
+    assert df.shape[1] == 13, "Case1 solution column count"
     df = case1.solve(tags={"Battery": "small", "Interval": "fast"})
     assert df.shape[0] == rows, "Case1 solution row count"
-    assert df.shape[1] == 14, "Case1 solution column count"
+    assert df.shape[1] == 15, "Case1 solution column count"
     assert np.allclose(
         df[df["Component"] == "System total"]["Efficiency (%)"][rows - 1],
         84.8522,
@@ -97,7 +102,7 @@ def test_case1():
         df[df["Component"] == "System total"]["Power (W)"][rows - 1],
         rtol=1e-6,
     ), "Case1 vs case1b power"
-    assert df2.shape[1] == 12, "Case1b solution column count"
+    assert df2.shape[1] == 13, "Case1b solution column count"
     assert case1b._g.attrs["groups"]["3V coin"] == "42", "Case1 source group name"
     assert case1b._g.attrs["groups"]["ADC"] == "AFE", "Case1 ADC group name"
 
@@ -238,6 +243,8 @@ def test_case10():
         case10.change_comp("Non-exist", comp=Source("5V", vo=5.0))
     df = case10.solve()
     assert len(df) == 4, "Case10 parameters row count"
+    with pytest.warns(UserWarning):
+        case10.change_comp("Load", comp=ILoad("Load", ii=0.5), rail="invalid")
 
 
 def test_case11():

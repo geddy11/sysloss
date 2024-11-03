@@ -37,6 +37,7 @@ from typing import Callable
 import warnings
 from packaging import version
 from tqdm import TqdmExperimentalWarning
+from warnings import warn
 
 warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
 from tqdm.autonotebook import tqdm
@@ -69,6 +70,8 @@ class System:
         Source component.
     group : str, optional
         Group name, for grouping components together.
+    rail : str, optional
+        Voltage rail name of output voltage.
 
     Raises
     ------
@@ -81,7 +84,7 @@ class System:
 
     """
 
-    def __init__(self, name: str, source: Source, *, group: str = ""):
+    def __init__(self, name: str, source: Source, *, group: str = "", rail: str = ""):
         """Class constructor"""
         self._g = None
         if not isinstance(source, Source):
@@ -97,6 +100,8 @@ class System:
         self._g.attrs["nodes"][source._params["name"]] = pidx
         self._g.attrs["groups"] = {}
         self._g.attrs["groups"][source._params["name"]] = group
+        self._g.attrs["rails"] = {}
+        self._g.attrs["rails"][source._params["name"]] = rail
 
     @classmethod
     def from_file(cls, fname: str):
@@ -261,6 +266,11 @@ class System:
             for key in phase_conf:
                 groups[key] = ""
         self._g.attrs["groups"] = groups
+        rails = _get_opt(sysparams, "rails", {})
+        if rails == {}:
+            for key in phase_conf:
+                rails[key] = ""
+        self._g.attrs["rails"] = rails
 
         return self
 
@@ -353,7 +363,7 @@ class System:
             tree.add(self._make_rtree(adj, child))
         return tree
 
-    def add_comp(self, parent: str, *, comp, group: str = ""):
+    def add_comp(self, parent: str, *, comp, group: str = "", rail: str = ""):
         """Add component to system.
 
         Parameters
@@ -364,6 +374,8 @@ class System:
             Component (from :py:mod:`~sysloss.components`).
         group : str, optional
             Group name, for grouping components together.
+        rail : str, optional
+            Voltage rail name of output voltage (not applicable on loads).
 
         Raises
         ------
@@ -372,7 +384,7 @@ class System:
 
         Examples
         --------
-        >>> sys.add_comp("Vin", comp=Converter("Buck", vo=1.8, eff=0.87))
+        >>> sys.add_comp("Vin", comp=Converter("Buck", vo=1.8, eff=0.87), rail="IO_1V8")
         >>> sys.add_comp("Buck", comp=PLoad("MCU", pwr=0.015), group="Main")
 
         """
@@ -392,8 +404,16 @@ class System:
         self._g.attrs["nodes"][comp._params["name"]] = cidx
         self._g.attrs["phase_conf"][comp._params["name"]] = {}
         self._g.attrs["groups"][comp._params["name"]] = group
+        if comp._component_type == _ComponentTypes.LOAD and rail != "":
+            warn(
+                "rail parameter ignored, not applicable on loads",
+                stacklevel=2,
+            )
+            self._g.attrs["rails"][comp._params["name"]] = ""
+        else:
+            self._g.attrs["rails"][comp._params["name"]] = rail
 
-    def add_source(self, source: Source, *, group: str = ""):
+    def add_source(self, source: Source, *, group: str = "", rail: str = ""):
         """Add an additional Source to the system.
 
         Parameters
@@ -402,6 +422,8 @@ class System:
             Source component.
         group : str, optional
             Group name, for grouping components together.
+        rail : str, optional
+            Voltage rail name of output voltage.
 
         Raises
         ------
@@ -421,8 +443,9 @@ class System:
         self._g.attrs["nodes"][source._params["name"]] = pidx
         self._g.attrs["phase_conf"][source._params["name"]] = {}
         self._g.attrs["groups"][source._params["name"]] = group
+        self._g.attrs["rails"][source._params["name"]] = rail
 
-    def change_comp(self, name: str, *, comp, group: str = ""):
+    def change_comp(self, name: str, *, comp, group: str = "", rail: str = ""):
         """Replace component.
 
         The new component can be of same type (parameter change), or a new type
@@ -436,6 +459,8 @@ class System:
             Component (from :py:mod:`~sysloss.components`).
         group : str, optional
             Group name, for grouping components together.
+        rail : str, optional
+            Voltage rail name of output voltage (not applicable on loads).
 
         Raises
         ------
@@ -480,6 +505,16 @@ class System:
         # delete old group and set new
         del [self._g.attrs["groups"][name]]
         self._g.attrs["groups"][comp._params["name"]] = group
+        # delete old rail and set new
+        del [self._g.attrs["rails"][name]]
+        if comp._component_type == _ComponentTypes.LOAD and rail != "":
+            warn(
+                "rail parameter ignored, not applicable on loads",
+                stacklevel=2,
+            )
+            self._g.attrs["rails"][comp._params["name"]] = ""
+        else:
+            self._g.attrs["rails"][comp._params["name"]] = rail
 
     def del_comp(self, name: str, *, del_childs: bool = True):
         """Delete component.
@@ -514,7 +549,7 @@ class System:
             if not del_childs:
                 raise ValueError("Source must be deleted with its childs")
             if len(self._get_sources()) < 2:
-                raise ValueError("Cannot delete the last source node!")
+                raise ValueError("Cannot delete the last source component!")
         childs = self._get_childs()
         # if not leaf, check if child type is allowed by parent type (not possible?)
         # if leaves[eidx] == 0:
@@ -529,12 +564,14 @@ class System:
                 del [self._g.attrs["nodes"][self._g[c]._params["name"]]]
                 del [self._g.attrs["phase_conf"][self._g[c]._params["name"]]]
                 del [self._g.attrs["groups"][self._g[c]._params["name"]]]
+                del [self._g.attrs["rails"][self._g[c]._params["name"]]]
                 self._g.remove_node(c)
         # delete node
         self._g.remove_node(eidx)
         del [self._g.attrs["nodes"][name]]
         del [self._g.attrs["phase_conf"][name]]
         del [self._g.attrs["groups"][name]]
+        del [self._g.attrs["rails"][name]]
         # restore links between new parent and childs, unless deleted
         if not del_childs:
             if childs[eidx] != -1:
@@ -760,8 +797,8 @@ class System:
             # calculate results for each node
             names, parent, typ, pwr, loss, trise, tpeak = [], [], [], [], [], [], []
             eff, warn, vsi, iso, vso, isi = [], [], [], [], [], []
-            domain, phases, ener, dname, group = [], [], [], "none", []
-            sources, dwarns = {}, {}
+            domain, phases, ener, dname, group, rail = [], [], [], "none", [], []
+            sources, dwarns, rail_in = {}, {}, []
             show_trise = False
             for n in self._topo_nodes:  # [vi, vo, ii, io]
                 phase_config = self._phase_lkup[n]
@@ -772,6 +809,7 @@ class System:
                 domain += [dname]
                 phases += [ph]
                 group += [self._g.attrs["groups"][name]]
+                rail += [self._g.attrs["rails"][name]]
                 vi = v[n]
                 vo = v[n]
                 ii = i[n]
@@ -788,7 +826,12 @@ class System:
                     for c in self._childs[n]:
                         io += i[c]
                     vi = v[p[0]]
-                parent += [self._get_parent_name(n)]
+                pn = self._get_parent_name(n)
+                parent += [pn]
+                if pn != "":
+                    rail_in += [self._g.attrs["rails"][pn]]
+                else:
+                    rail_in += [""]
                 p, l, e, tr, tp = self._g[n]._solv_pwr_loss(
                     vi, vo, ii, io, ta, ph, phase_config
                 )
@@ -825,6 +868,8 @@ class System:
                 domain += [""]
                 phases += [ph]
                 group += [""]
+                rail += [""]
+                rail_in += [""]
                 vsi += [sources[list(sources.keys())[d]]]
                 vso += [""]
                 isi += [""]
@@ -847,6 +892,8 @@ class System:
             domain += [""]
             phases += [ph]
             group += [""]
+            rail += [""]
+            rail_in += [""]
             vsi += [""]
             vso += [""]
             isi += [""]
@@ -866,7 +913,10 @@ class System:
             res = {}
             res["Component"] = names
             res["Type"] = typ
-            res["Parent"] = parent
+            if any(["" != x for x in rail]):
+                res["Rail in"] = rail_in
+            else:
+                res["Parent"] = parent
             res["Domain"] = domain
             if any(["" != x for x in group]):
                 res["Group"] = group
@@ -877,6 +927,8 @@ class System:
                 res["Phase"] = phases
             res["Vin (V)"] = vsi
             res["Vout (V)"] = vso
+            if any(["" != x for x in rail]):
+                res["Rail out"] = rail
             res["Iin (A)"] = isi
             res["Iout (A)"] = iso
             res["Power (W)"] = pwr
@@ -1307,6 +1359,7 @@ class System:
                 "phases": self._g.attrs["phases"],
                 "phase_conf": self._g.attrs["phase_conf"],
                 "groups": self._g.attrs["groups"],
+                "rails": self._g.attrs["rails"],
             }
         }
         ridx = self._get_sources()
