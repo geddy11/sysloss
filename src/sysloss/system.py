@@ -278,15 +278,23 @@ class System:
         """Get node index from component name"""
         if name in self._g.attrs["nodes"]:
             return self._g.attrs["nodes"][name]
+        if name in self._g.attrs["rails"].values():
+            cname = [
+                i for i in self._g.attrs["rails"] if self._g.attrs["rails"][i] == name
+            ]
+            return self._g.attrs["nodes"][cname[0]]
 
         return -1
 
     def _chk_parent(self, parent: str):
         """Check if parent exists"""
-        if not parent in self._g.attrs["nodes"].keys():
-            raise ValueError('Parent name "{}" not found!'.format(parent))
+        if (
+            parent in self._g.attrs["nodes"].keys()
+            or parent in self._g.attrs["rails"].values()
+        ):
+            return True
 
-        return True
+        raise ValueError('Parent name "{}" not found!'.format(parent))
 
     def _chk_comp(self, comp: str):
         """Check if component exists"""
@@ -295,11 +303,21 @@ class System:
 
         return True
 
-    def _chk_name(self, name: str):
-        """Check if component name is valid"""
+    def _chk_name(self, name: str, rail: str):
+        """Check if component/rail name is valid"""
         # check if name exists
-        if name in self._g.attrs["nodes"].keys():
+        if name in self._g.attrs["nodes"].keys() or (
+            name in self._g.attrs["rails"].values()
+        ):
             raise ValueError('Component name "{}" is already used!'.format(name))
+        if rail != "":
+            if name == rail:
+                raise ValueError("Component name and rail name cannot be the same!")
+            if (
+                rail in self._g.attrs["nodes"].keys()
+                or rail in self._g.attrs["rails"].values()
+            ):
+                raise ValueError('Rail name "{}" is already used!'.format(name))
 
         return True
 
@@ -369,18 +387,18 @@ class System:
         Parameters
         ----------
         parent : str
-            Name of parent component.
+            Name of parent component or power rail to connect to.
         comp : component
             Component (from :py:mod:`~sysloss.components`).
         group : str, optional
             Group name, for grouping components together.
         rail : str, optional
-            Voltage rail name of output voltage (not applicable on loads).
+            Voltage rail name of output voltage (not applicable on loads). Must be unique.
 
         Raises
         ------
         ValueError
-            If parent does not allow connection to component.
+            If parent does not allow connection to component, or name is already used.
 
         Examples
         --------
@@ -391,7 +409,7 @@ class System:
         # check that parent exists
         self._chk_parent(parent)
         # check that component name is unique
-        self._chk_name(comp._params["name"])
+        self._chk_name(comp._params["name"], rail)
         # check that parent allows component type as child
         pidx = self._get_index(parent)
         if not comp._component_type in self._g[pidx]._child_types:
@@ -423,19 +441,19 @@ class System:
         group : str, optional
             Group name, for grouping components together.
         rail : str, optional
-            Voltage rail name of output voltage.
+            Voltage rail name of output voltage. Must be unique.
 
         Raises
         ------
         ValueError
-            If `source` is not a Source class.
+            If `source` is not a Source class or name is already used.
 
         Examples
         --------
         >>> sys.add_source(Source("5V", vo=5.0, limits={"io": [0.0, 0.5]}))
 
         """
-        self._chk_name(source._params["name"])
+        self._chk_name(source._params["name"], rail)
         if not isinstance(source, Source):
             raise ValueError("Component must be a source!")
 
@@ -460,14 +478,15 @@ class System:
         group : str, optional
             Group name, for grouping components together.
         rail : str, optional
-            Voltage rail name of output voltage (not applicable on loads).
+            Voltage rail name of output voltage (not applicable on loads). Must be unique.
 
         Raises
         ------
         ValueError
             If trying to change a `source` component to a different type, or
             if the target component does not exist or
-            if the parent does not accept a connection to the new component.
+            if the parent does not accept a connection to the new component or
+            if the name is already used.
 
         Examples
         --------
@@ -476,9 +495,9 @@ class System:
         """
         # check that component exists
         self._chk_comp(name)
-        # if component name changes, check that it is unique
+        # if component/rail name changes, check that it is unique
         if name != comp._params["name"]:
-            self._chk_name(comp._params["name"])
+            self._chk_name(comp._params["name"], rail)
 
         # source can only be changed to source
         eidx = self._get_index(name)

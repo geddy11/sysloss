@@ -477,7 +477,7 @@ def test_case16():
     assert dfp.shape[0] == 9, "Case 16 solution row count"
 
 
-cap = 0.15
+cap = 0.15  # battery capacity in case17
 
 
 def probe():
@@ -514,3 +514,25 @@ def test_case17():
     )
     assert bdf.shape[0] < 1000, "Case17 result rows with load phases"
     assert bdf.shape[1] == 5, "Case17 result columns with load phases"
+
+
+def test_case18():
+    """Test already used rail/component name"""
+    case18 = System("Case18", Source("12V", vo=12), rail="12_sys")
+    with pytest.raises(ValueError):
+        case18.add_comp("12V", comp=Converter("Buck 9V", vo=9, eff=0.91), rail="12V")
+    with pytest.raises(ValueError):
+        case18.add_comp(
+            "12V", comp=Converter("Buck 9V", vo=9, eff=0.91), rail="Buck 9V"
+        )
+    with pytest.raises(ValueError):
+        case18.add_comp("12V", comp=Converter("12_sys", vo=9, eff=0.91))
+    with pytest.raises(ValueError):
+        case18.add_comp("12V", comp=Converter("Buck 9V", vo=9, eff=0.91), rail="12_sys")
+    with pytest.raises(ValueError):
+        case18.add_source(Source("3.3V aux", vo=3.3), rail="12_sys")
+    case18.add_comp("12_sys", comp=Converter("Buck 9V", vo=9, eff=0.91), rail="9V")
+    with pytest.raises(ValueError):
+        case18.change_comp("12V", comp=Source("9V", vo=9))
+    with pytest.raises(ValueError):
+        case18.change_comp("12V", comp=Source("9V in", vo=9), rail="12_sys")
