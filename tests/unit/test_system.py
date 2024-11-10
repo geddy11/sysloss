@@ -536,3 +536,59 @@ def test_case18():
         case18.change_comp("12V", comp=Source("9V", vo=9))
     with pytest.raises(ValueError):
         case18.change_comp("12V", comp=Source("9V in", vo=9), rail="12_sys")
+
+
+def test_case19():
+    """Rail report"""
+    case19 = System(
+        "Bluetooth sensor", Source("CR2032", vo=3.0, rs=0), group="main", rail="Vbatt"
+    )
+    case19.add_comp(
+        "Vbatt", comp=Converter("Buck 1.8V", vo=1.8, eff=0.88, limits={"vo": [2, 4]})
+    )
+    case19.add_comp("Buck 1.8V", comp=PLoad("MCU", pwr=13e-3))
+    case19.add_comp(
+        "Vbatt",
+        comp=Converter(
+            "Boost 5V",
+            vo=5.0,
+            eff=0.92,
+            limits={"io": [0, 0.001]},
+        ),
+        rail="5V_sys",
+    )
+    case19.add_comp("Boost 5V", comp=RLoss("RC filter", rs=6.8))
+    case19.add_comp(
+        "5V_sys",
+        comp=LinReg("LDO", vo=3.0, ig=0.001, limits={"io": [0, 1]}),
+        rail="3V0",
+    )
+    case19.add_comp("3V0", comp=PSwitch("P-switch", rs=0.01), group="aux")
+    case19.add_comp("P-switch", comp=ILoad("load 2", ii=0.2))
+    case19.add_comp("RC filter", comp=ILoad("Sensor", ii=6e-3))
+    df = case19.rail_rep()
+    assert df.shape[0] == 3, "Case19 solution row count"
+    assert df.shape[1] == 7, "Case19 solution column count"
+    warn = df["Warnings"].to_list()
+    assert "vo" in warn[0], "Case19 warnings (vo) column"
+    assert "io" in warn[0], "Case19 warnings (io) column"
+    case19_phases = {"sleep": 3600, "acquire": 2.5, "transmit": 2e-3}
+    case19.set_sys_phases(case19_phases)
+    case19.set_comp_phases("Boost 5V", phase_conf=["acquire"])
+    mcu_pwr = {"sleep": 12e-6, "acquire": 15e-3, "transmit": 35e-3}
+    case19.set_comp_phases("MCU", phase_conf=mcu_pwr)
+    dfp = case19.rail_rep()
+    assert dfp.shape[0] == 9, "Case19 solution row count (phases)"
+    assert dfp.shape[1] == 8, "Case19 solution column count (phases)"
+    warn = dfp["Warnings"].to_list()
+    assert warn[0] == "vo", "Case19 sleep warning"
+    assert "vo" in warn[3], "Case19 sleep warning (vo) column"
+    assert "io" in warn[3], "Case19 sleep warning (io) column"
+    dfp = case19.rail_rep(phase="acquire")
+    assert dfp.shape[0] == 3, "Case19 solution row count (one phase)"
+    assert dfp.shape[1] == 8, "Case19 solution column count (one phase)"
+    case19b = System("Bluetooth sensor", Source("CR2032", vo=3.0, rs=0))
+    case19b.add_comp("CR2032", comp=Converter("Buck 1.8V", vo=1.8, eff=0.88))
+    dfs = case19b.solve()
+    dfr = case19b.rail_rep()
+    assert dfs.shape == dfr.shape, "Case19b no rails"

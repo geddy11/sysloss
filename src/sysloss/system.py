@@ -1027,6 +1027,106 @@ class System:
         dff = pd.concat(frames, ignore_index=True)
         return dff.replace(np.nan, "")
 
+    def rail_rep(
+        self,
+        *,
+        vtol: float = 1e-6,
+        itol: float = 1e-6,
+        maxiter: int = 10000,
+        quiet: bool = True,
+        phase: str = "",
+        energy: bool = False,
+        ta: float = 25.0,
+        tags: dict = {},
+    ) -> pd.DataFrame:
+        """Voltage rail report.
+
+        The rail report first calls .solve(), then summarizes current, power and losses
+        per voltage rail.
+
+        Parameters
+        ----------
+        * :
+            Parameters are identical to :py:meth:`~system.System.solve`.
+
+        Returns
+        -------
+        pd.DataFrame
+            Analysis result. If no voltage rails have been defined, the result is identical
+            to that returned by :py:meth:`~system.System.solve`.
+
+        Raises
+        ------
+        ValueError
+            If the specified phase is not defined. See :py:meth:`~system.System.set_phases`.
+        RuntimeError
+            If a steady-state solution has not been found after `maxiter` iterations.
+
+        Examples
+        --------
+        >>> sys.rail_rep()
+        """
+        df = self.solve(
+            vtol=vtol,
+            itol=itol,
+            maxiter=maxiter,
+            quiet=quiet,
+            phase=phase,
+            energy=energy,
+            ta=ta,
+            tags=tags,
+        )
+        if "Phase" in df:
+            phase_list = df["Phase"].unique().tolist()
+            if "" in phase_list:
+                phase_list.remove("")
+        else:
+            phase_list = [""]
+
+        if "Rail in" in df:
+            rails = df["Rail in"].unique().tolist()
+            rails.remove("")
+            rail, vin, iin, pwr, loss, eff = [], [], [], [], [], []
+            warn, phases, res = [], [], {}
+            if len(rails) > 0:
+                for ph in phase_list:
+                    for r in rails:
+                        rail += [r]
+                        phases += [ph]
+                        if ph != "":
+                            filt = (df["Rail in"] == r) & (df["Phase"] == ph)
+                        else:
+                            filt = df["Rail in"] == r
+                        vin += [df[filt]["Vin (V)"].tolist()[0]]
+                        iin += [sum(df[filt]["Iin (A)"])]
+                        p = sum(df[filt]["Power (W)"])
+                        pwr += [p]
+                        l = sum(df[filt]["Loss (W)"])
+                        loss += [l]
+                        if l == 0.0:
+                            eff += [100.0]
+                        else:
+                            eff += [100 * p / (p + l)]
+                        w = list(set(df[filt]["Warnings"].tolist()))
+                        if len(w) > 1:
+                            if "" in w:
+                                w.remove("")
+                            warn += [", ".join(w)]
+                        else:
+                            warn += [""]
+                if phase_list != [""]:
+                    res["Phase"] = phases
+                res["Rail"] = rail
+                res["Voltage (V)"] = vin
+                res["Current (A)"] = iin
+                res["Power (W)"] = pwr
+                res["Loss (W)"] = loss
+                res["Efficiency (%)"] = eff
+                res["Warnings"] = warn
+                return pd.DataFrame(res)
+        else:
+            return df
+
     def _filt_lim(self, node: int, key: str) -> list:
         """Filter out default limit values"""
         limits = _get_opt(self._g[node]._limits, key, "")
