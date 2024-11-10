@@ -87,3 +87,8 @@ def test_case2():
     assert os.path.exists("tests/unit/Test.svg") == True, "Check svg file creation"
     assert make_diag(tsys, config=my_conf) != None, "Check image generation with config"
     assert get_conf() == _DEF_CONF, "Check default configuration"
+    ret = make_diag(tsys, fname="tests/unit/Test2.svg", group=False, config=my_conf)
+    assert ret == None, "Check diagram to file, no grouping"
+    assert (
+        os.path.exists("tests/unit/Test2.svg") == True
+    ), "Check svg file creation, no grouping"

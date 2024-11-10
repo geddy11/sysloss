@@ -94,7 +94,7 @@ def get_conf() -> dict:
     return copy.deepcopy(_DEF_CONF)
 
 
-def make_diag(sys: System, *, fname: str = None, config: dict = {}):
+def make_diag(sys: System, *, fname: str = None, group: bool = True, config: dict = {}):
     """Create power tree diagram.
 
     The default diagram is rendered as a top-bottom diagram with components represented
@@ -104,6 +104,8 @@ def make_diag(sys: System, *, fname: str = None, config: dict = {}):
     ----------
     fname : str, optional
         Filename for output image. File extension defines image format.
+    group : bool, optional
+        Cluster components based on group names, by default False.
     config: dict, optional
         Graphviz configuration.
 
@@ -155,7 +157,7 @@ def make_diag(sys: System, *, fname: str = None, config: dict = {}):
         if g != "":
             groups[g] = 1
     # create clusters
-    if groups != {}:
+    if group and groups != {}:
         for g in groups.keys():
             cconf = copy.deepcopy(bd_conf["cluster"]["default"])
             if g in bd_conf["cluster"]:
@@ -164,12 +166,11 @@ def make_diag(sys: System, *, fname: str = None, config: dict = {}):
             sg = pydot.Subgraph("cluster_" + g, label=g, **cconf)
             for n in sys._g.attrs["nodes"]:
                 if sys._g.attrs["groups"][n] == g:
-                    # print(n)
                     add_node(sg, n, bd_conf["node"])
             graph.add_subgraph(sg)
     # non-clustered nodes
     for n in sys._g.attrs["nodes"]:
-        if sys._g.attrs["groups"][n] == "":
+        if sys._g.attrs["groups"][n] == "" or not group:
             add_node(graph, n, bd_conf["node"])
     # edges
     p = dict(zip(sys._g.attrs["nodes"].values(), sys._g.attrs["nodes"].keys()))
