@@ -154,10 +154,10 @@ def test_converter():
     edata = {"vi": [4.5], "io": [0.1, 0.4, 0.6, 0.9], "eff": [[0.3, 0.4, 0.67, 0.89]]}
     ca = Converter("Conv 1D", vo=5.0, eff=edata)
     assert close(ca._ipr._interp(0.25, 100), 0.35), "Converter 1D interpolation"
-    edata["eff"][-1] = 1.1
+    edata["eff"][0][-1] = 1.1
     with pytest.raises(ValueError):
         ca = Converter("Conv 1D interpolation, eff > 1.0", vo=5.0, eff=edata)
-    edata["eff"][-1] = 0.0
+    edata["eff"][0][-1] = 0.0
     with pytest.raises(ValueError):
         ca = Converter("Conv 1D interpolation, eff = 0.0", vo=5.0, eff=edata)
     edata["io"][-1] = 0.59
@@ -172,6 +172,42 @@ def test_converter():
     assert close(
         ca._ipr._interp(0.0, 100), edata["eff"][1][0]
     ), "Converter 2D interpolation"
+    # check incorrect interpolation data format
+    edata = {
+        "vi": [6.7],
+        "io": [0.15, 0.45, 0.65],
+        "eff": [[0.31, 0.41, 0.671], [0.43, 0.553, 0.783]],
+    }
+    with pytest.raises(ValueError):
+        Converter("Conv 2D 1", vo=5.5, eff=edata)
+    edata = {
+        "vi": [8.0, 16.0],
+        "io": [0.19, 0.49, 0.69, 0.8],
+        "eff": [[0.1, 0.4, 0.71], [0.3, 0.53, 0.83]],
+    }
+    with pytest.raises(ValueError):
+        Converter("Conv 2D 2", vo=5.5, eff=edata)
+    edata = {
+        "vo": [3.5, 10],
+        "io": [0.1, 0.4, 0.6],
+        "eff": [[0.3, 0.4, 0.67], [0.4, 0.55, 0.78]],
+    }
+    with pytest.raises(ValueError):
+        Converter("Conv 2D 3", vo=3.3, eff=edata)
+    edata = {
+        "vi": [5.5],
+        "ii": [0.4, 0.5, 0.6],
+        "eff": [[0.45, 0.65, 0.8]],
+    }
+    with pytest.raises(ValueError):
+        Converter("Conv 2D 4", vo=1.8, eff=edata)
+    edata = {
+        "vi": [5.5],
+        "io": [0.4, 0.6],
+        "ef": [[0.65, 0.8]],
+    }
+    with pytest.raises(ValueError):
+        Converter("Conv 2D 5", vo=1.8, eff=edata)
 
 
 def test_linreg():

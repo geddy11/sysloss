@@ -151,6 +151,20 @@ def _check_limits(limits: dict):
     return limits
 
 
+def _check_interp(idata: dict, z: str):
+    """Check interpolation data format"""
+    keys = idata.keys()
+    if not "vi" in keys or not "io" in keys or not z in keys:
+        raise ValueError("interpolation data must contain vi, io and " + z)
+    if not np.all(np.diff(idata["io"]) > 0):
+        raise ValueError("io values must be monotonic increasing")
+    vsh = np.array(idata["vi"]).shape
+    ish = np.array(idata["io"]).shape
+    zsh = np.array(idata[z]).shape
+    if vsh[0] != zsh[0] or ish[0] != zsh[1]:
+        raise ValueError("dimensions of interpolation data do not match")
+
+
 class _Interp0d:
     """Dummy interpolator for constant"""
 
@@ -854,8 +868,7 @@ class VLoss(RLoss):
         self._params["name"] = name
         self._params["rt"] = abs(rt)
         if isinstance(vdrop, dict):
-            if not np.all(np.diff(vdrop["io"]) > 0):
-                raise ValueError("io values must be monotonic increasing")
+            _check_interp(vdrop, "vdrop")
             if len(vdrop["vi"]) == 1:
                 self._ipr = _Interp1d(vdrop["io"], vdrop["vdrop"][0])
             else:
@@ -996,8 +1009,7 @@ class Converter(_Component):
         self._params["name"] = name
         self._params["vo"] = vo
         if isinstance(eff, dict):
-            if not np.all(np.diff(eff["io"]) > 0):
-                raise ValueError("io values must be monotonic increasing")
+            _check_interp(eff, "eff")
             if np.min(eff["eff"]) <= 0.0:
                 raise ValueError("Efficiency values must be > 0.0")
             if np.max(eff["eff"]) > 1.0:
@@ -1211,8 +1223,7 @@ class LinReg(_Component):
         else:
             igc = ig
         if isinstance(igc, dict):
-            if not np.all(np.diff(igc["io"]) > 0):
-                raise ValueError("ig values must be monotonic increasing")
+            _check_interp(igc, "ig")
             if np.min(igc["ig"]) < 0.0:
                 raise ValueError("ig values must be >= 0.0")
             if len(igc["vi"]) == 1:
@@ -1406,8 +1417,7 @@ class PSwitch(_Component):
         self._params["name"] = name
         self._params["rs"] = abs(rs)
         if isinstance(ig, dict):
-            if not np.all(np.diff(ig["io"]) > 0):
-                raise ValueError("ig values must be monotonic increasing")
+            _check_interp(ig, "ig")
             if np.min(ig["ig"]) < 0.0:
                 raise ValueError("ig values must be >= 0.0")
             if len(ig["vi"]) == 1:

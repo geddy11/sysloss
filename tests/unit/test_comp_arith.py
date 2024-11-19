@@ -632,12 +632,12 @@ def test_linreg(linreg, name, vo, vdrop, ig, iis, rt, active_phases):
             eloss = abs(ig * plt[0]) + (abs(plt[0]) - abs(v)) * plt[3]
             if active_phases != []:
                 if plt[4] not in active_phases:
-                    eloss = abs(iis * plt[0])
                     ipwr = abs(iis * plt[0])
+                    eloss = abs(iis * plt[0])
             if s:
                 ipwr, eloss = 0.0, 0.0
-            assert close(pwr, ipwr), "Check LinReg power"
             assert close(loss, eloss), "Check LinReg loss"
+            assert close(pwr, ipwr), "Check LinReg power"
             if ipwr == 0.0 or v == 0.0:
                 eeff = 0.0
             opwr = ipwr - eloss
