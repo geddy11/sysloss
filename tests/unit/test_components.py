@@ -302,5 +302,5 @@ def test_component():
         "ylabel",
         "title",
     ], "Check _Component annotation labels"
-    cb = _Component.from_file("Test", fname="None")
-    assert isinstance(cb, _ComponentInterface), "instance _Component"
+    with pytest.raises(ValueError):
+        _Component.from_file("Test", fname="tests/data/component.toml")

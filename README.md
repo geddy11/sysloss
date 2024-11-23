@@ -25,6 +25,7 @@ $ conda install conda-forge::sysloss
 ```
 
 ## Usage
+Analyze the power tree of a simple battery-powered bluetooth sensor:
 ```python
 from sysloss.components import *
 from sysloss.system import System
@@ -51,10 +52,12 @@ df = bts.solve()
 print(df)
 ```
 ![result](https://github.com/geddy11/sysloss/raw/main/docs/bts.png)
-```python
-from sysloss.diagram import make_diag
 
-make_diag(bts, fname="bts.png")
+Create graphical power tree diagrams:
+```python
+import sysloss.diagram as sd
+
+sd.make_diag(bts, fname="bts.png")
 ```
 ![tree](https://github.com/geddy11/sysloss/raw/main/docs/bts-tree.png)
 

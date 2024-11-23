@@ -261,6 +261,11 @@ class _Component:
         et = list(_ComponentTypes)
         return et
 
+    _cparams = {
+        "name": "component",
+        "params": {"p": {"typ": [float], "opt": True, "def": 1.0e6}},
+    }
+
     def __init__(self, name: str):
         self._params = {}
         self._params["name"] = name
@@ -269,8 +274,40 @@ class _Component:
 
     @classmethod
     def from_file(cls, name: str, *, fname: str):
-        """Read parameters from .toml file."""
-        return cls(name)
+        """Read component parameters from .toml file.
+
+        Parameters
+        ----------
+        name : str
+            Component name
+        fname : str
+            File name.
+
+        Raises
+        ------
+        ValueError
+            If parameter value is not of the correct type.
+
+        """
+        with open(fname, "r") as f:
+            config = toml.load(f)
+
+        fparams = {}
+        for key in cls._cparams["params"]:
+            if cls._cparams["params"][key]["opt"]:
+                pval = _get_opt(
+                    config[cls._cparams["name"]],
+                    key,
+                    cls._cparams["params"][key]["def"],
+                )
+            else:
+                pval = _get_mand(config[cls._cparams["name"]], key)
+            if type(pval) not in cls._cparams["params"][key]["typ"]:
+                raise ValueError("Parameter {} is not of the correct type".format(key))
+            fparams[key] = pval
+
+        fparams["limits"] = _get_opt(config, "limits", LIMITS_DEFAULT)
+        return cls(name, **fparams)
 
     def _get_inp_current(self, phase, phase_conf={}):
         """Get initial current value for solver"""
@@ -366,6 +403,14 @@ class Source(_Component):
         et.remove(_ComponentTypes.SOURCE)
         return et
 
+    _cparams = {
+        "name": "source",
+        "params": {
+            "vo": {"typ": [int, float], "opt": False},
+            "rs": {"typ": [int, float], "opt": True, "def": RS_DEFAULT},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -381,25 +426,6 @@ class Source(_Component):
         self._params["rt"] = 0.0
         self._limits = _check_limits(limits)
         self._ipr = None
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read source parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Source name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        v = _get_mand(config["source"], "vo")
-        r = _get_opt(config["source"], "rs", RS_DEFAULT)
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, vo=v, rs=r, limits=lim)
 
     def _get_outp_voltage(self, phase, phase_conf={}):
         """Get initial voltage value for solver"""
@@ -468,6 +494,16 @@ class PLoad(_Component):
         """The Load component cannot have childs"""
         return [None]
 
+    _cparams = {
+        "name": "pload",
+        "params": {
+            "pwr": {"typ": [int, float], "opt": False},
+            "pwrs": {"typ": [int, float], "opt": True, "def": PWRS_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+            "loss": {"typ": [bool], "opt": True, "def": False},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -486,27 +522,6 @@ class PLoad(_Component):
         self._limits = _check_limits(limits)
         self._ipr = None
         self._params["loss"] = loss
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read PLoad parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Load name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        p = _get_mand(config["pload"], "pwr")
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        pwrs = _get_opt(config["pload"], "pwrs", PWRS_DEFAULT)
-        rt = _get_opt(config["pload"], "rt", RT_DEFAULT)
-        loss = _get_opt(config["pload"], "loss", False)
-        return cls(name, pwr=p, limits=lim, pwrs=pwrs, rt=rt, loss=loss)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -573,6 +588,16 @@ class ILoad(PLoad):
 
     """
 
+    _cparams = {
+        "name": "iload",
+        "params": {
+            "ii": {"typ": [int, float], "opt": False},
+            "iis": {"typ": [int, float], "opt": True, "def": IIS_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+            "loss": {"typ": [bool], "opt": True, "def": False},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -591,27 +616,6 @@ class ILoad(PLoad):
         self._params["rt"] = abs(rt)
         self._ipr = None
         self._params["loss"] = loss
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read ILoad parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Load name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        i = _get_mand(config["iload"], "ii")
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        iis = _get_opt(config["iload"], "iis", IIS_DEFAULT)
-        rt = _get_opt(config["iload"], "rt", RT_DEFAULT)
-        loss = _get_opt(config["iload"], "loss", False)
-        return cls(name, ii=i, limits=lim, iis=iis, rt=rt, loss=loss)
 
     def _get_inp_current(self, phase, phase_conf={}):
         """Get initial current value for solver"""
@@ -660,6 +664,15 @@ class RLoad(PLoad):
 
     """
 
+    _cparams = {
+        "name": "rload",
+        "params": {
+            "rs": {"typ": [int, float], "opt": False},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+            "loss": {"typ": [bool], "opt": True, "def": False},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -678,26 +691,6 @@ class RLoad(PLoad):
         self._limits = _check_limits(limits)
         self._ipr = None
         self._params["loss"] = loss
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read RLoad parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Load name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        r = _get_mand(config["rload"], "rs")
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        rt = _get_opt(config["rload"], "rt", RT_DEFAULT)
-        loss = _get_opt(config["rload"], "loss", False)
-        return cls(name, rs=r, rt=rt, limits=lim, loss=loss)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
@@ -751,6 +744,14 @@ class RLoss(_Component):
         et.remove(_ComponentTypes.SOURCE)
         return et
 
+    _cparams = {
+        "name": "rloss",
+        "params": {
+            "rs": {"typ": [int, float], "opt": False},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -765,25 +766,6 @@ class RLoss(_Component):
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
         self._ipr = None
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read RLoss parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Loss name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        r = _get_mand(config["rloss"], "rs")
-        rt = _get_opt(config["rloss"], "rt", RT_DEFAULT)
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, rs=r, limits=lim, rt=rt)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -856,6 +838,14 @@ class VLoss(RLoss):
         et.remove(_ComponentTypes.SOURCE)
         return et
 
+    _cparams = {
+        "name": "vloss",
+        "params": {
+            "vdrop": {"typ": [int, float, dict], "opt": False},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -884,25 +874,6 @@ class VLoss(RLoss):
             self._params["vdrop"] = abs(vdrop)
             self._ipr = _Interp0d(abs(vdrop))
         self._limits = _check_limits(limits)
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read VLoss parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Loss name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        vd = _get_mand(config["vloss"], "vdrop")
-        rt = _get_opt(config["vloss"], "rt", RT_DEFAULT)
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        return cls(name, vdrop=vd, rt=rt, limits=lim)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate component input current from vi, vo and io"""
@@ -994,6 +965,17 @@ class Converter(_Component):
         et.remove(_ComponentTypes.SOURCE)
         return et
 
+    _cparams = {
+        "name": "converter",
+        "params": {
+            "vo": {"typ": [int, float], "opt": False},
+            "eff": {"typ": [float, dict], "opt": False},
+            "iq": {"typ": [int, float], "opt": True, "def": IQ_DEFAULT},
+            "iis": {"typ": [int, float], "opt": True, "def": IIS_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -1035,29 +1017,6 @@ class Converter(_Component):
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read Converter parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            Converter name
-        fname : str
-            File name.
-
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        v = _get_mand(config["converter"], "vo")
-        e = _get_mand(config["converter"], "eff")
-        iq = _get_opt(config["converter"], "iq", IQ_DEFAULT)
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        iis = _get_opt(config["converter"], "iis", IIS_DEFAULT)
-        rt = _get_opt(config["converter"], "rt", RT_DEFAULT)
-        return cls(name, vo=v, eff=e, iq=iq, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
         """Get initial current value for solver"""
@@ -1403,6 +1362,16 @@ class PSwitch(_Component):
         et.remove(_ComponentTypes.SOURCE)
         return et
 
+    _cparams = {
+        "name": "pswitch",
+        "params": {
+            "rs": {"typ": [int, float], "opt": True, "def": RS_DEFAULT},
+            "ig": {"typ": [int, float, dict], "opt": True, "def": IG_DEFAULT},
+            "iis": {"typ": [int, float], "opt": True, "def": IIS_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
     def __init__(
         self,
         name: str,
@@ -1436,27 +1405,6 @@ class PSwitch(_Component):
         self._params["iis"] = abs(iis)
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
-
-    @classmethod
-    def from_file(cls, name: str, *, fname: str):
-        """Read PSwitch parameters from .toml file.
-
-        Parameters
-        ----------
-        name : str
-            PSwitch name
-        fname : str
-            File name.
-        """
-        with open(fname, "r") as f:
-            config = toml.load(f)
-
-        rs = _get_opt(config["pswitch"], "rs", RS_DEFAULT)
-        ig = _get_opt(config["pswitch"], "ig", IG_DEFAULT)
-        lim = _get_opt(config, "limits", LIMITS_DEFAULT)
-        iis = _get_opt(config["pswitch"], "iis", IIS_DEFAULT)
-        rt = _get_opt(config["pswitch"], "rt", RT_DEFAULT)
-        return cls(name, rs=rs, ig=ig, limits=lim, iis=iis, rt=rt)
 
     def _get_inp_current(self, phase, phase_conf=[]):
         """Get initial current value for solver"""
