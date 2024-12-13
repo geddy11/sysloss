@@ -51,6 +51,7 @@ from sysloss.components import (
     _Interp1d,
     _Interp2d,
     RS_DEFAULT,
+    IG_DEFAULT,
     LIMITS_DEFAULT,
     STATE_DEFAULT,
 )
@@ -91,17 +92,19 @@ class System:
             raise ValueError("First component of system must be a source!")
 
         self._g = rx.PyDAG(check_cycle=True, multigraph=False, attrs={})
-        pidx = self._g.add_node(source)
+        cidx = self._g.add_node(source)
         self._g.attrs["name"] = name
         self._g.attrs["phases"] = {}
         self._g.attrs["phase_conf"] = {}
         self._g.attrs["phase_conf"][source._params["name"]] = {}
         self._g.attrs["nodes"] = {}
-        self._g.attrs["nodes"][source._params["name"]] = pidx
+        self._g.attrs["nodes"][source._params["name"]] = cidx
         self._g.attrs["groups"] = {}
         self._g.attrs["groups"][source._params["name"]] = group
         self._g.attrs["rails"] = {}
         self._g.attrs["rails"][source._params["name"]] = rail
+        self._g.attrs["pnames"] = {}
+        self._g.attrs["pnames"][cidx] = []
 
     @classmethod
     def from_file(cls, fname: str):
@@ -143,15 +146,25 @@ class System:
                     fname, ver
                 )
             )
-        # add sources
+        # add sources/pmux
         for e in range(1, len(entires)):
-            vo = _get_mand(sys[entires[e]]["params"], "vo")
+            if sys[entires[e]]["type"] == "SOURCE":
+                vo = _get_mand(sys[entires[e]]["params"], "vo")
             rs = _get_opt(sys[entires[e]]["params"], "rs", RS_DEFAULT)
             lim = _get_opt(sys[entires[e]], "limits", LIMITS_DEFAULT)
             if e == 1:
                 self = cls(sysname, Source(entires[e], vo=vo, rs=rs, limits=lim))
             else:
-                self.add_source(Source(entires[e], vo=vo, rs=rs, limits=lim))
+                if sys[entires[e]]["type"] == "SOURCE":
+                    self.add_source(Source(entires[e], vo=vo, rs=rs, limits=lim))
+                else:
+                    ig = _get_opt(sys[entires[e]]["params"], "ig", IG_DEFAULT)
+                    iis = _get_opt(sys[entires[e]]["params"], "iis", 0.0)
+                    rt = _get_opt(sys[entires[e]]["params"], "rt", 0.0)
+                    self.add_comp(
+                        sys[entires[e]]["parents"],
+                        comp=PMux(entires[e], rs=rs, ig=ig, iis=iis, rt=rt, limits=lim),
+                    )
             # add childs
             if sys[entires[e]]["childs"] != {}:
                 for p in list(sys[entires[e]]["childs"].keys()):
@@ -160,6 +173,7 @@ class System:
                         limits = _get_opt(c, "limits", LIMITS_DEFAULT)
                         iq = _get_opt(c["params"], "iq", 0.0)
                         ig = _get_opt(c["params"], "ig", 0.0)
+                        rs = _get_opt(c["params"], "rs", 0.0)
                         iis = _get_opt(c["params"], "iis", 0.0)
                         rt = _get_opt(c["params"], "rt", 0.0)
                         if c["type"] == "CONVERTER":
@@ -245,7 +259,6 @@ class System:
                                     ),
                                 )
                         elif c["type"] == "PSWITCH":
-                            rs = _get_opt(c["params"], "rs", 0.0)
                             self.add_comp(
                                 p,
                                 comp=PSwitch(
@@ -305,7 +318,6 @@ class System:
 
     def _chk_name(self, name: str, rail: str):
         """Check if component/rail name is valid"""
-        # check if name exists
         if name in self._g.attrs["nodes"].keys() or (
             name in self._g.attrs["rails"].values()
         ):
@@ -353,6 +365,9 @@ class System:
         for n in nodes:
             if self._g.in_degree(n) > 0:
                 ind = [i for i in self._g.predecessor_indices(n)]
+                if len(ind) > 1:
+                    for i in range(len(ind)):
+                        ind[i] = self._get_index(self._g.attrs["pnames"][n][i])
                 ps[n] = ind
         return ps
 
@@ -360,6 +375,14 @@ class System:
         """Get list of sources"""
         tn = [n for n in rx.topological_sort(self._g)]
         return [n for n in tn if isinstance(self._g[n], Source)]
+
+    def _get_pmux(self):
+        """Get index of pmux"""
+        tn = [n for n in rx.topological_sort(self._g)]
+        pl = [n for n in tn if isinstance(self._g[n], PMux)]
+        if pl == []:
+            return -1
+        return pl[0]
 
     def _get_topo_sort(self):
         """Get nodes topological sorted"""
@@ -369,8 +392,9 @@ class System:
     def _sys_vars(self):
         """Get system variable lists"""
         vn = max(self._get_nodes()) + 1  # highest node index + 1
-        v = list(np.zeros(vn))  # voltages
-        i = list(np.zeros(vn))  # currents
+        self._g.attrs["hidx"] = vn
+        v = np.zeros(vn)  # voltages
+        i = np.zeros(vn)  # currents
         s = [{} for x in range(vn)]
         return v, i, s
 
@@ -381,13 +405,13 @@ class System:
             tree.add(self._make_rtree(adj, child))
         return tree
 
-    def add_comp(self, parent: str, *, comp, group: str = "", rail: str = ""):
+    def add_comp(self, parent: str | list, *, comp, group: str = "", rail: str = ""):
         """Add component to system.
 
         Parameters
         ----------
-        parent : str
-            Name of parent component or power rail to connect to.
+        parent : str | list
+            Name of parent component(s) or power rail(s) to connect to.
         comp : component
             Component (from :py:mod:`~sysloss.components`).
         group : str, optional
@@ -404,24 +428,44 @@ class System:
         --------
         >>> sys.add_comp("Vin", comp=Converter("Buck", vo=1.8, eff=0.87), rail="IO_1V8")
         >>> sys.add_comp("Buck", comp=PLoad("MCU", pwr=0.015), group="Main")
+        >>> sys.add_comp(["Vbatt", "USB_5V"], comp=PMux("Power mux", rs=[0.35, 0.4]))
 
         """
-        # check that parent exists
-        self._chk_parent(parent)
+        # check that parent(s) are valid
+        if isinstance(parent, list):
+            if len(parent) > len(set(parent)):
+                raise ValueError("parent paramenter contains duplicates!")
+            if comp._component_type != _ComponentTypes.PMUX:
+                raise ValueError("only PMux component can have multiple inputs!")
+            for p in parent:
+                self._chk_parent(p)
+            plist = parent
+        else:
+            self._chk_parent(parent)
+            plist = [parent]
         # check that component name is unique
         self._chk_name(comp._params["name"], rail)
-        # check that parent allows component type as child
-        pidx = self._get_index(parent)
-        if not comp._component_type in self._g[pidx]._child_types:
-            raise ValueError(
-                "Parent does not allow child of type {}!".format(
-                    comp._component_type.name
+        # check that parent(s) allows component type as child
+        pidx = []
+        for p in plist:
+            pidx += [self._get_index(p)]
+            if not comp._component_type in self._g[pidx[-1]]._child_types:
+                raise ValueError(
+                    "Parent {} does not allow child of type {}!".format(
+                        p, comp._component_type.name
+                    )
                 )
-            )
-        cidx = self._g.add_child(pidx, comp, None)
+        # can only have one pmux
+        if comp._component_type.name == "PMUX":
+            for key in self._g.attrs["nodes"]:
+                if self._g[self._g.attrs["nodes"][key]]._component_type.name == "PMUX":
+                    raise ValueError("a system can only have one PMux")
+        # all ok, add component
+        cidx = self._g.add_child(pidx[0], comp, None)
         self._g.attrs["nodes"][comp._params["name"]] = cidx
         self._g.attrs["phase_conf"][comp._params["name"]] = {}
         self._g.attrs["groups"][comp._params["name"]] = group
+        self._g.attrs["pnames"][cidx] = plist
         if comp._component_type == _ComponentTypes.LOAD and rail != "":
             warn(
                 "rail parameter ignored, not applicable on loads",
@@ -430,6 +474,9 @@ class System:
             self._g.attrs["rails"][comp._params["name"]] = ""
         else:
             self._g.attrs["rails"][comp._params["name"]] = rail
+        if len(pidx) > 1:
+            for p in range(1, len(pidx), 1):
+                self._g.add_edge(pidx[p], cidx, None)
 
     def add_source(self, source: Source, *, group: str = "", rail: str = ""):
         """Add an additional Source to the system.
@@ -457,11 +504,12 @@ class System:
         if not isinstance(source, Source):
             raise ValueError("Component must be a source!")
 
-        pidx = self._g.add_node(source)
-        self._g.attrs["nodes"][source._params["name"]] = pidx
+        cidx = self._g.add_node(source)
+        self._g.attrs["nodes"][source._params["name"]] = cidx
         self._g.attrs["phase_conf"][source._params["name"]] = {}
         self._g.attrs["groups"][source._params["name"]] = group
         self._g.attrs["rails"][source._params["name"]] = rail
+        self._g.attrs["pnames"][cidx] = []
 
     def change_comp(self, name: str, *, comp, group: str = "", rail: str = ""):
         """Replace component.
@@ -499,11 +547,16 @@ class System:
         if name != comp._params["name"]:
             self._chk_name(comp._params["name"], rail)
 
-        # source can only be changed to source
         eidx = self._get_index(name)
+        # source can only be changed to source
         if self._g[eidx]._component_type == _ComponentTypes.SOURCE:
             if not isinstance(comp, Source):
                 raise ValueError("Source cannot be changed to other type!")
+
+        # pmux can only be changed to pmux
+        if self._g[eidx]._component_type == _ComponentTypes.PMUX:
+            if not isinstance(comp, PMux):
+                raise ValueError("PMux cannot be changed to other type!")
 
         # check that parent allows component type as child
         parents = self._get_parents()
@@ -652,25 +705,55 @@ class System:
         for n in self._get_nodes():
             v[n] = self._g[n]._get_outp_voltage(phase, self._phase_lkup[n])
             i[n] = self._g[n]._get_inp_current(phase, self._phase_lkup[n])
-            state[n] = self._g[n]._get_state(phase, self._phase_lkup[n])
+            p = self._parents[n]
+            if p != -1:
+                state[n]["off"] = [
+                    self._g[i]._get_state(phase, self._phase_lkup[i])["off"][0]
+                    for i in p
+                ]
+            else:
+                state[n] = self._g[n]._get_state(phase, self._phase_lkup[n])
         return v, i, state
+
+    def _child_curr(self, node, i, v, state):
+        """Find sum of currents into childs"""
+        io, pstate = 0.0, {}
+        for c in self._childs[node]:
+            pp = self._parents[c]
+            vc = [v[c]]
+            pstate["off"] = state[node]["off"]
+            if pp != -1:
+                vc = [v[i] for i in pp]
+                pstate["off"] = [state[i]["off"][0] for i in pp]
+            pinp = self._g[c]._get_pri_inp(pstate, vc)
+            # print("cc", pinp, node, c, pp, vc, pstate)
+            if pinp != -1 and len(pp) > 1:
+                if pp[pinp] == node:
+                    io += i[c]
+            else:
+                io += i[c]
+        return io
 
     def _fwd_prop(self, v: float, i: float, phase: str = "", state: list = []):
         """Forward propagation of voltages"""
-        vo, _, ostate = self._sys_vars()
+        vo = np.zeros(self._g.attrs["hidx"])
+        ostate = [{} for x in range(self._g.attrs["hidx"])]
         # update output voltages (per node)
         for n in self._topo_nodes:
             p = self._parents[n]
             phase_config = self._phase_lkup[n]
-            vi, ii, io, pstate = 0.0, 0.0, 0.0, STATE_DEFAULT
+            vi, ii, io, pstate = [0.0], 0.0, 0.0, {}
             if p != -1:  # not root
-                vi = v[p[0]]
+                vi = [v[i] for i in p]
                 ii = i[n]
-                pstate = state[p[0]]
+                pstate["off"] = [state[i]["off"][0] for i in p]
+            else:
+                vi = [v[n]]
+                pstate["off"] = state[n]["off"]
             if self._childs[n] != -1:  # not leaf
                 # sum currents into childs
-                for c in self._childs[n]:
-                    io += i[c]
+                io = self._child_curr(n, i, v, state)
+
             vo[n], ostate[n] = self._g[n]._solv_outp_volt(
                 vi, ii, io, phase, phase_config, pstate
             )
@@ -679,23 +762,23 @@ class System:
 
     def _back_prop(self, v: float, i: float, phase: str = "", state: list = []):
         """Backward propagation of currents"""
-        _, ii, _ = self._sys_vars()
+        ii = np.zeros(self._g.attrs["hidx"])
         # update input currents (per node)
         for n in self._topo_nodes[::-1]:
             p = self._parents[n]
             phase_config = self._phase_lkup[n]
-            vi, vo, io = 0.0, 0.0, 0.0
+            vi, vo, io, pstate = [0.0], 0.0, 0.0, {}
             if p == -1:  # root
-                vi = v[n]
-                pstate = STATE_DEFAULT
+                vi = [v[n]]
+                pstate["off"] = state[n]["off"]
             else:
-                vi = v[p[0]]
-                pstate = state[p[0]]
+                vi = [v[i] for i in p]
+                pstate["off"] = [state[i]["off"][0] for i in p]
             if self._childs[n] != -1:  # not leaf
                 vo = v[n]
                 # sum currents into childs
-                for c in self._childs[n]:
-                    io += i[c]
+                io = self._child_curr(n, i, v, state)
+                # print(n, i, v, pstate, io)
             ii[n] = self._g[n]._solv_inp_curr(vi, vo, io, phase, phase_config, pstate)
 
         return ii
@@ -730,7 +813,7 @@ class System:
                     print("{}Tolerances met after {} iterations".format(pname, iters))
                 break
             v, i, state = vi, ii, ostate
-        return v, i, iters
+        return v, i, iters, state
 
     def _calc_energy(self, phase, pwr):
         """Calculate energy per 24h"""
@@ -741,6 +824,25 @@ class System:
             tot_time += self._g.attrs["phases"][ph]
         cycles = 24 * 3600.0 / tot_time
         return (self._g.attrs["phases"][phase] / 3600.0) * pwr * cycles
+
+    def _find_domain(self, n, domain, v):
+        """Find voltage domain"""
+        if self._g[n]._component_type.name == "SOURCE":
+            return self._g[n]._params["name"]
+        elif self._g[n]._component_type.name == "PMUX":
+            p = self._parents[n]
+            vin = [v[i] for i in p]
+            idx = 0
+            for i in reversed(range(len(vin))):
+                if abs(vin[i]) != 0.0:
+                    idx = i
+            an = rx.ancestors(self._g, p[idx])
+            if an == set():
+                return self._g[p[idx]]._params["name"]
+            for i in an:
+                if self._g.in_degree(i) == 0:
+                    return self._g[i]._params["name"]
+        return domain
 
     def solve(
         self,
@@ -808,7 +910,7 @@ class System:
         ppwr, ploss, peff, ptime, pener, pcurr = [], [], [], [], [], []
         frames = []
         for ph in phase_list:
-            v, i, iters = self._solve(vtol, itol, maxiter, quiet, ph)
+            v, i, iters, state = self._solve(vtol, itol, maxiter, quiet, ph)
             if iters > maxiter:
                 raise RuntimeError(
                     "Steady-state not achieved after {} iterations".format(iters - 1)
@@ -817,14 +919,13 @@ class System:
             names, parent, typ, pwr, loss, trise, tpeak = [], [], [], [], [], [], []
             eff, warn, vsi, iso, vso, isi = [], [], [], [], [], []
             domain, phases, ener, dname, group, rail = [], [], [], "none", [], []
-            sources, dwarns, rail_in = {}, {}, []
+            sources, dwarns, rail_in, pstate = {}, {}, [], {}
             show_trise = False
             for n in self._topo_nodes:  # [vi, vo, ii, io]
                 phase_config = self._phase_lkup[n]
                 name = self._g[n]._params["name"]
                 names += [name]
-                if self._g[n]._component_type.name == "SOURCE":
-                    dname = self._g[n]._params["name"]
+                dname = self._find_domain(n, dname, v)
                 domain += [dname]
                 phases += [ph]
                 group += [self._g.attrs["groups"][name]]
@@ -835,17 +936,27 @@ class System:
                 io = i[n]
                 p = self._parents[n]
 
+                if p == -1:
+                    pstate["off"] = state[n]["off"]
+                    vv = [v[n]]
+                else:
+                    pstate["off"] = [state[i]["off"][0] for i in p]
+                    vv = [v[i] for i in p]
+                pn = self._get_parent_name(n)
                 if p == -1:  # root
                     vi = v[n] + self._g[n]._params["rs"] * ii
-                elif self._childs[n] == -1:  # leaf
-                    vi = v[p[0]]
-                    io = 0.0
                 else:
-                    io = 0.0
-                    for c in self._childs[n]:
-                        io += i[c]
-                    vi = v[p[0]]
-                pn = self._get_parent_name(n)
+                    pinp = self._g[n]._get_pri_inp(pstate, vv)
+                    if pinp != -1 and len(p) > 1:
+                        vi = v[p[pinp]]
+                        pn = self._get_parent_name(p[pinp])
+                    else:
+                        vi = v[p[0]]
+                    if self._childs[n] == -1:  # leaf
+                        io = 0.0
+                    else:
+                        io = self._child_curr(n, i, v, state)
+
                 parent += [pn]
                 if pn != "":
                     rail_in += [self._g.attrs["rails"][pn]]
@@ -1143,16 +1254,10 @@ class System:
         iq, rs, rt, eff, ii, pwr, iis, ltr, ltp = [], [], [], [], [], [], [], [], []
         lii, lio, lvi, lvo, lpi, lpo, lpl, pwrs = [], [], [], [], [], [], [], []
         lvd = []
-        domain, dname = [], "none"
-        src_cnt = 0
 
         for n in self._topo_nodes:
             names += [self._g[n]._params["name"]]
             typ += [self._g[n]._component_type.name]
-            if self._g[n]._component_type.name == "SOURCE":
-                dname = self._g[n]._params["name"]
-                src_cnt += 1
-            domain += [dname]
             if params:
                 pdict = {
                     "vo": "",
@@ -1196,8 +1301,6 @@ class System:
         res = {}
         res["Component"] = names
         res["Type"] = typ
-        if src_cnt > 1:
-            res["Domain"] = domain
         if params:
             res["vo (V)"] = vo
             res["vdrop (V)"] = vdrop
@@ -1309,7 +1412,8 @@ class System:
 
         Components that have no load phases defined are always active.
 
-        The :py:class:`~components.Converter` and :py:class:`~components.Linreg`
+        The :py:class:`~components.Converter`, :py:class:`~components.Linreg`,
+        :py:class:`~components.PSwitch` and :py:class:`~components.PMux`
         components support a list of active phases, and go
         into sleep mode if not active. In sleep mode, all components connected to the
         output are automatically turned off.
@@ -1363,7 +1467,7 @@ class System:
         self._rel_update()
         if self._g.attrs["phases"] == {}:
             return None
-        names, typ, parent, phase = [], [], [], []
+        names, typ, phase = [], [], []
         rs, ii, pwr = [], [], []
         domain, dname = [], "none"
         phase_names = list(self._g.attrs["phases"].keys())
@@ -1377,7 +1481,12 @@ class System:
             ph_names = []
             if tname == "SOURCE" or tname == "SLOSS":
                 ph_names += ["N/A"]
-            elif tname == "CONVERTER" or tname == "LINREG" or tname == "PSWITCH":
+            elif (
+                tname == "CONVERTER"
+                or tname == "LINREG"
+                or tname == "PSWITCH"
+                or tname == "PMUX"
+            ):
                 if len(self._phase_lkup[n]) > 0:
                     for p in phase_names:
                         if p in self._phase_lkup[n]:
@@ -1396,7 +1505,6 @@ class System:
                 names += [self._g[n]._params["name"]]
                 typ += [tname]
                 domain += [dname]
-                parent += [self._get_parent_name(n)]
                 phase += [p]
                 if tname == "SOURCE" or tname == "SLOSS":
                     rs += [""]
@@ -1438,7 +1546,6 @@ class System:
         res = {}
         res["Component"] = names
         res["Type"] = typ
-        res["Parent"] = parent
         if src_cnt > 1:
             res["Domain"] = domain
         res["Active phase"] = phase
@@ -1482,9 +1589,37 @@ class System:
             }
         }
         ridx = self._get_sources()
+        pidx = self._get_pmux()
+        pdidx = []
+        if pidx != -1:
+            pdidx = rx.descendants(self._g, pidx)
         root = [self._g[n]._params["name"] for n in ridx]
+        # components to pmux
         for r in range(len(ridx)):
             tree = self._get_childs_tree(ridx[r])
+            cdict = {}
+            if tree != {}:
+                for e in tree:
+                    childs = []
+                    for c in tree[e]:
+                        if c != pidx and c not in pdidx:
+                            childs += [
+                                {
+                                    "type": self._g[c]._component_type.name,
+                                    "params": self._g[c]._params,
+                                    "limits": self._get_applims(c),
+                                }
+                            ]
+                    cdict[self._g[e]._params["name"]] = childs
+            sys[root[r]] = {
+                "type": self._g[ridx[r]]._component_type.name,
+                "params": self._g[ridx[r]]._params,
+                "limits": self._get_applims(ridx[r]),
+                "childs": cdict,
+            }
+        # pmux and childs
+        if pidx != -1:
+            tree = self._get_childs_tree(pidx)
             cdict = {}
             if tree != {}:
                 for e in tree:
@@ -1498,11 +1633,12 @@ class System:
                             }
                         ]
                     cdict[self._g[e]._params["name"]] = childs
-            sys[root[r]] = {
-                "type": self._g[ridx[r]]._component_type.name,
-                "params": self._g[ridx[r]]._params,
-                "limits": self._get_applims(ridx[r]),
+            sys[self._g[pidx]._params["name"]] = {
+                "type": self._g[pidx]._component_type.name,
+                "params": self._g[pidx]._params,
+                "limits": self._get_applims(pidx),
                 "childs": cdict,
+                "parents": [self._g[n]._params["name"] for n in self._parents[pidx]],
             }
 
         with open(fname, "w") as f:
@@ -1689,17 +1825,17 @@ class System:
         vo_org = self._g[pidx]._params["vo"]
         rs_org = self._g[pidx]._params["rs"]
         # probe/deplete returns (capacity, voltage, rs)
-        state = pfunc()
+        bstate = pfunc()
         t = [0.0]
-        cap = [state[0]]
-        volt = [state[1]]
-        rs = [state[2]]
+        cap = [bstate[0]]
+        volt = [bstate[1]]
+        rs = [bstate[2]]
         phase_list = [""]
         if len(list(self._g.attrs["phases"].keys())) > 0:
             phase_list = list(self._g.attrs["phases"].keys())
         # deplete args: time, current
         unit, mult = "Ah", 1.0
-        if state[0] < 100.0:
+        if bstate[0] < 100.0:
             unit, mult = "mAh", 1000.0
         self._rel_update()
         cdelta = 0.0
@@ -1711,24 +1847,24 @@ class System:
             unit_scale=True,
             unit_divisor=1000,
         ) as pbar:
-            while state[0] > 0.0 and state[1] > cutoff:
-                self._g[pidx]._params["vo"] = state[1]
-                self._g[pidx]._params["rs"] = state[2]
-                _, i, _ = self._solve(phase=phase_list[phidx])
+            while bstate[0] > 0.0 and bstate[1] > cutoff:
+                self._g[pidx]._params["vo"] = bstate[1]
+                self._g[pidx]._params["rs"] = bstate[2]
+                _, i, _, _ = self._solve(phase=phase_list[phidx])
                 if phase_list == [""]:
                     deltat = (cap[0] / i[pidx]) * 3.6
                 else:
                     deltat = self._g.attrs["phases"][phase_list[phidx]]
-                state = dfunc(deltat, i[pidx])
-                cdelta += (cap[-1] - state[0]) * mult
+                bstate = dfunc(deltat, i[pidx])
+                cdelta += (cap[-1] - bstate[0]) * mult
                 pbar.update(int(cdelta))
                 cdelta -= int(cdelta)
                 phidx = (phidx + 1) % len(phase_list)
-                if state[0] > 0.0 and state[1] > cutoff:
+                if bstate[0] > 0.0 and bstate[1] > cutoff:
                     t += [t[-1] + deltat]
-                    cap += [state[0]]
-                    volt += [state[1]]
-                    rs += [state[2]]
+                    cap += [bstate[0]]
+                    volt += [bstate[1]]
+                    rs += [bstate[2]]
             pbar.total = int(mult * cap[0] - cdelta)
             pbar.close()
         # restore source params

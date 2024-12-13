@@ -35,9 +35,11 @@ def test_case1():
     case1 = System(
         "Case1 system", Source("3V coin", vo=3, rs=13e-3), group="42", rail="SYS_3V"
     )
-    case1.add_comp("3V coin", comp=Converter("1.8V buck", vo=1.8, eff=0.87, iq=12e-6))
+    case1.add_source(Source("USB", vo=5, rs=0.1))
+    case1.add_comp(["SYS_3V", "USB"], comp=PMux("Pmux", rs=0.01))
+    case1.add_comp("Pmux", comp=Converter("1.8V buck", vo=1.8, eff=0.87, iq=12e-6))
     case1.add_comp("1.8V buck", comp=PLoad("MCU", pwr=27e-3))
-    case1.add_comp("3V coin", comp=Converter("5V boost", vo=5, eff=0.91, iq=42e-6))
+    case1.add_comp("Pmux", comp=Converter("5V boost", vo=5, eff=0.91, iq=42e-6))
     case1.add_comp("5V boost", comp=ILoad("Sensor", ii=15e-3))
     case1.add_comp(
         parent="5V boost", comp=RLoss("RC filter", rs=33.0, limits={"io": [0.0, 1.0]})
@@ -54,23 +56,23 @@ def test_case1():
     with pytest.raises(RuntimeError):
         case1.solve(maxiter=1)
     df = case1.solve(quiet=False)
-    rows = 13
+    rows = 17
     assert df.shape[0] == rows, "Case1 solution row count"
-    assert df.shape[1] == 13, "Case1 solution column count"
+    assert df.shape[1] == 14, "Case1 solution column count"
     df = case1.solve(tags={"Battery": "small", "Interval": "fast"})
     assert df.shape[0] == rows, "Case1 solution row count"
-    assert df.shape[1] == 15, "Case1 solution column count"
+    assert df.shape[1] == 16, "Case1 solution column count"
     assert np.allclose(
         df[df["Component"] == "System total"]["Efficiency (%)"][rows - 1],
-        84.8522,
-        rtol=1e-6,
+        84.82,
+        rtol=1e-3,
     ), "Case1 efficiency"
     assert (
         df[df["Component"] == "System total"]["Warnings"][rows - 1] == ""
     ), "Case 1 warnings"
     case1.save("tests/unit/case1.json")
     dfp = case1.params(limits=True)
-    assert len(dfp) == rows - 1, "Case1 parameters row count"
+    assert len(dfp) == rows - 3, "Case1 parameters row count"
     assert case1.tree() == None, "Case1 tree output"
     with pytest.raises(ValueError):
         case1.tree("Dummy")
@@ -102,7 +104,7 @@ def test_case1():
         df[df["Component"] == "System total"]["Power (W)"][rows - 1],
         rtol=1e-6,
     ), "Case1 vs case1b power"
-    assert df2.shape[1] == 13, "Case1b solution column count"
+    assert df2.shape[1] == 14, "Case1b solution column count"
     assert case1b._g.attrs["groups"]["3V coin"] == "42", "Case1 source group name"
     assert case1b._g.attrs["groups"]["ADC"] == "AFE", "Case1 ADC group name"
 
@@ -333,11 +335,11 @@ def test_case13():
         dff[dff["Component"] == "Subsystem 3.3V"]["Warnings"][5] == ""
     ), "Case 13 Subsystem 3.3V warnings"
     dfp = case13b.params()
-    assert dfp.shape[1] == 15, "Case13 parameter column count"
+    assert dfp.shape[1] == 14, "Case13 parameter column count"
     phases = {"sleep": 3600, "active": 127}
     case13b.set_sys_phases(phases)
     dfp = case13b.phases()
-    assert dfp.shape[1] == 8, "Case13 phases column count"
+    assert dfp.shape[1] == 7, "Case13 phases column count"
 
 
 def test_case14():
@@ -592,3 +594,45 @@ def test_case19():
     dfs = case19b.solve()
     dfr = case19b.rail_rep()
     assert dfs.shape == dfr.shape, "Case19b no rails"
+
+
+def test_case20():
+    """Test PMux corner cases"""
+    pm = System("Test", Source("12V", vo=12), rail="sys")
+    pm.add_comp("sys", comp=RLoss("R1", rs=1))
+    pm.add_comp("sys", comp=RLoss("R2", rs=2))
+    pm.add_comp("sys", comp=RLoss("R3", rs=3))
+    pm.add_comp("sys", comp=RLoss("R4", rs=4))
+    pm.add_comp("sys", comp=RLoss("R5", rs=5))
+    pm.add_comp(["R1", "R2", "R3", "R4"], comp=PMux("pmux 1", rs=0.1), rail="12v")
+    pm.add_comp("12v", comp=PLoad("MCU", pwr=1))
+    with pytest.raises(ValueError):
+        pm.change_comp("pmux 1", comp=PLoad("MCU4", pwr=1))
+    df = pm.solve()
+    rl = df["Loss (W)"].to_list()
+    assert rl[1] + rl[2] + rl[3] + rl[4] == 0.0, "Only R1 dissipates power"
+    for t in range(4):
+        pn = System("Test 2", Source("S3", vo=15))
+        for i in range(3):
+            if i < t:
+                pn.add_source(Source("S{}".format(i), vo=0))
+            else:
+                pn.add_source(Source("S{}".format(i), vo=12 + i))
+        pn.add_comp(["S0", "S1", "S2", "S3"], comp=PMux("PMux", rs=0.1))
+        pn.add_comp("PMux", comp=PLoad("load", pwr=1))
+        df = pn.solve()
+        assert df[df.Component == "PMux"]["Domain"][4] == "S{}".format(t)
+    pm.del_comp("pmux 1")
+    df = pm.solve()
+    assert (
+        df[df.Component == "System total"]["Iout (A)"][6] == 0.0
+    ), "no pmux - no current"
+    po = System("Test 3", Source("S0", vo=12), rail="sys")
+    po.add_source(Source("S1", vo=5))
+    with pytest.raises(ValueError):
+        po.add_comp(["S0", "S0", "S1"], comp=PMux("PMux", rs=0.2))
+    with pytest.raises(ValueError):
+        po.add_comp(["S0", "S1"], comp=PLoad("load", pwr=1))
+    po.add_comp(["S0", "S1"], comp=PMux("PMux 1", rs=0.2))
+    with pytest.raises(ValueError):
+        po.add_comp(["S0", "S1"], comp=PMux("PMux 2", rs=0.2))

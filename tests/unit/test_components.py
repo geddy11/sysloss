@@ -260,6 +260,62 @@ def test_pswitch():
     assert isinstance(la, _ComponentInterface), "instance PSwitch"
 
 
+def test_pmux():
+    """Check PMux component"""
+    pa = PMux(
+        "P-mux",
+        rs=[0.33, 0.42, 0.15],
+        ig={
+            "vi": [1.9, 5.8, 12.5],
+            "io": [0.002, 0.02, 0.2],
+            "ig": [
+                [3.0e-6, 3.0e-6, 4.0e-6],
+                [9.0e-6, 9.0e-6, 99.0e-6],
+                [56.0e-6, 67.0e-6, 77.0e-6],
+            ],
+        },
+        iis=0.57e-6,
+    )
+    assert pa._component_type == _ComponentTypes.PMUX, "PMux component type"
+    assert _ComponentTypes.SOURCE not in list(pa._child_types), "PMux child types"
+    assert pa._get_annot() == [
+        "Output current (A)",
+        "Input voltage (V)",
+        "P-mux ground current",
+    ]
+    with pytest.raises(ValueError):
+        PMux("P-mux", rs=["a", 1, 2, 3], ig=2e-5)
+    with pytest.raises(ValueError):
+        PMux("P-mux", rs=0.1, ig={"vi": [5], "io": [0.1, 1], "ig": [[-0.1, 0.1]]})
+    pb = PMux("P-mux", rs=0.1, ig={"vi": [5], "io": [0.1, 1], "ig": [[0.1e-6, 0.2e-5]]})
+    assert pb._get_annot() == [
+        "Output current (A)",
+        "Ground current (A)",
+        "P-mux ground current",
+    ]
+    pc = PMux.from_file("P-mux", fname="tests/data/pmux.toml")
+    assert pa._params == pc._params, "PMux parameters from file"
+    assert pa._limits == pc._limits, "PMux limits from file"
+    pd = PMux(
+        "P-mux",
+        rs=[0.33, 0.42],
+        ig={
+            "vi": [1.9, 5.8, 12.5],
+            "io": [0.002, 0.02, 0.2],
+            "ig": [
+                [3.0e-6, 3.0e-6, 4.0e-6],
+                [9.0e-6, 9.0e-6, 99.0e-6],
+                [56.0e-6, 67.0e-6, 77.0e-6],
+            ],
+        },
+        iis=0.57e-6,
+    )
+    with pytest.raises(ValueError):
+        pd._solv_outp_volt(
+            [3, 4, 5], 0.3, 0.2, "", ["Apple", "Orange"], {"off": [True, True, False]}
+        )
+
+
 def test_interpolators():
     """Check interpolators"""
     interp0d = _Interp0d(0.66)

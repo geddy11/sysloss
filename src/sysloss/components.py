@@ -53,6 +53,7 @@ __all__ = [
     "Converter",
     "LinReg",
     "PSwitch",
+    "PMux",
 ]
 
 
@@ -66,6 +67,7 @@ class _ComponentTypes(Enum):
     CONVERTER = 4
     LINREG = 5
     PSWITCH = 6
+    PMUX = 7
 
 
 MAX_DEFAULT = 1.0e6
@@ -88,14 +90,21 @@ LIMITS_DEFAULT = {
     "tr": [0.0, MAX_DEFAULT],  # temperature rise (°C)
     "tp": [-MAX_DEFAULT, MAX_DEFAULT],  # peak temperature (°C)
 }
-STATE_DEFAULT = {"off": False}
-STATE_OFF = {"off": True}
+STATE_DEFAULT = {"off": [False]}
+STATE_OFF = {"off": [True]}
 
 
 def _get_opt(params, key, default):
     """Get optional parameter from dict"""
     if key in params:
         return params[key]
+    return default
+
+
+def _get_lopt(params, key, idx, default):
+    """Get optional parameter from dict"""
+    if key in params:
+        return params[key][idx]
     return default
 
 
@@ -128,9 +137,9 @@ def _get_eff(ipwr, opwr, def_eff=100.0):
     return def_eff
 
 
-def _calc_inp_current(vo, i, pstate):
+def _calc_inp_current(vo, i, pstate, psidx):
     """Calculate input current from vo and state vector"""
-    if abs(vo) == 0.0 or _get_opt(pstate, "off", False):
+    if abs(vo) == 0.0 or _get_lopt(pstate, "off", psidx, False):
         return 0.0
     return i
 
@@ -309,6 +318,10 @@ class _Component:
         fparams["limits"] = _get_opt(config, "limits", LIMITS_DEFAULT)
         return cls(name, **fparams)
 
+    def _get_pri_inp(self, pstate, v):
+        """Determine which input is prioritized"""
+        return 0
+
     def _get_inp_current(self, phase, phase_conf={}):
         """Get initial current value for solver"""
         return 0.0
@@ -427,24 +440,30 @@ class Source(_Component):
         self._limits = _check_limits(limits)
         self._ipr = None
 
+    def _get_state(self, phase, phase_conf={}):
+        """Get initial state value for solver"""
+        if abs(self._params["vo"]) == 0.0:
+            return STATE_OFF
+        return STATE_DEFAULT
+
     def _get_outp_voltage(self, phase, phase_conf={}):
         """Get initial voltage value for solver"""
         return self._params["vo"]
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        return _calc_inp_current(self._params["vo"], io, pstate)
+        """Calculate Source input current from vi, vo and io"""
+        return _calc_inp_current(self._params["vo"], io, pstate, 0)
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
-        if self._params["vo"] == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate Source output voltage from vi, ii and io"""
+        if self._params["vo"] == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         vo = self._params["vo"] - self._params["rs"] * io
         return vo, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
-        """Calculate power and loss in component"""
-        if self._params["vo"] == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate power and loss in Source"""
+        if self._params["vo"] == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 100.0, 0.0, 0.0
         ipwr = abs(self._params["vo"] * io)
         loss = self._params["rs"] * io * io
@@ -524,8 +543,8 @@ class PLoad(_Component):
         self._params["loss"] = loss
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate Load input current from vi, vo and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
         if not phase_conf:
             p = self._params["pwr"]
@@ -534,26 +553,27 @@ class PLoad(_Component):
         else:
             p = phase_conf[phase]
 
-        return p / abs(vi)
+        return p / abs(vi[0])
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Load output voltage is always 0"""
-        if _get_opt(pstate, "off", False):
+        if _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         return 0.0, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
-        """Calculate power and loss in component"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate power and loss in Load"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
             if self._params["loss"]:
                 return 0.0, 0.0, 0.0, 0.0, 0.0
             else:
                 return 0.0, 0.0, 100.0, 0.0, 0.0
-        tr = abs(vi * ii) * self._params["rt"]
+        pi = abs(vi * ii)
+        tr = pi * self._params["rt"]
         if self._params["loss"]:
-            return 0.0, abs(vi * ii), 0.0, tr, tr + ta
+            return 0.0, pi, 0.0, tr, tr + ta
         else:
-            return abs(vi * ii), 0.0, 100.0, tr, tr + ta
+            return pi, 0.0, 100.0, tr, tr + ta
 
     def _get_limits(self):
         """Applicable limits"""
@@ -622,7 +642,7 @@ class ILoad(PLoad):
         return self._params["ii"]
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
         if not phase_conf:
             i = self._params["ii"]
@@ -693,7 +713,7 @@ class RLoad(PLoad):
         self._params["loss"] = loss
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
         r = self._params["rs"]
         if not phase_conf:
@@ -702,7 +722,7 @@ class RLoad(PLoad):
             pass
         else:
             r = phase_conf[phase]
-        return abs(vi) / r
+        return abs(vi[0]) / r
 
     def _get_limits(self):
         """Applicable limits"""
@@ -768,15 +788,15 @@ class RLoss(_Component):
         self._ipr = None
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        return _calc_inp_current(vi, io, pstate)
+        """Calculate RLoss input current from vi, vo and io"""
+        return _calc_inp_current(vi[0], io, pstate, 0)
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate RLoss output voltage from vi, ii and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
-        vo = vi - self._params["rs"] * io * np.sign(vi)
-        if np.sign(vo) == np.sign(vi):
+        vo = vi[0] - self._params["rs"] * io * np.sign(vi[0])
+        if np.sign(vo) == np.sign(vi[0]):
             return vo, STATE_DEFAULT
         raise ValueError(
             "Unstable system: RLoss component '{}' has zero output voltage".format(
@@ -785,9 +805,9 @@ class RLoss(_Component):
         )
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
-        """Calculate power and loss in component"""
+        """Calculate power and loss in RLoss"""
         vout = vi - self._params["rs"] * io * np.sign(vi)
-        if np.sign(vout) != np.sign(vi) or _get_opt(pstate, "off", False):
+        if np.sign(vout) != np.sign(vi) or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
@@ -876,15 +896,15 @@ class VLoss(RLoss):
         self._limits = _check_limits(limits)
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        return _calc_inp_current(vi, io, pstate)
+        """Calculate VLoss input current from vi, vo and io"""
+        return _calc_inp_current(vi[0], io, pstate, 0)
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate Vloss output voltage from vi, ii and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
-        vo = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
-        if np.sign(vo) == np.sign(vi):
+        vo = vi[0] - self._ipr._interp(abs(io), abs(vi[0])) * np.sign(vi[0])
+        if np.sign(vo) == np.sign(vi[0]):
             return vo, STATE_DEFAULT
         raise ValueError(
             "Unstable system: VLoss component '{}' has zero output voltage".format(
@@ -893,9 +913,9 @@ class VLoss(RLoss):
         )
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
-        """Calculate power and loss in component"""
+        """Calculate power and loss in VLoss"""
         vout = vi - self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
-        if np.sign(vout) != np.sign(vi) or _get_opt(pstate, "off", False):
+        if np.sign(vout) != np.sign(vi) or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
@@ -1037,14 +1057,14 @@ class Converter(_Component):
         return v
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
-        """Calculate component input current from vi, vo and io"""
+        """Calculate Converter input current from vi, vo and io"""
         if (
-            abs(vi) == 0.0
+            abs(vi[0]) == 0.0
             or self._params["vo"] == 0.0
-            or _get_opt(pstate, "off", False)
+            or _get_lopt(pstate, "off", 0, False)
         ):
             return 0.0
-        ve = vi * self._ipr._interp(abs(io), abs(vi))
+        ve = vi[0] * self._ipr._interp(abs(io), abs(vi[0]))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -1054,9 +1074,9 @@ class Converter(_Component):
         return abs(self._params["vo"] * io / ve)
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
+        """Calculate Converter output voltage from vi, ii and io"""
         v = self._params["vo"]
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         if phase_conf:
             if phase not in phase_conf:
@@ -1064,8 +1084,8 @@ class Converter(_Component):
         return v, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
-        """Calculate power and loss in component"""
-        if _get_opt(pstate, "off", False):
+        """Calculate power and loss in Converter"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         if io == 0.0:
             loss = abs(self._params["iq"] * vi)
@@ -1254,10 +1274,10 @@ class LinReg(_Component):
         return v
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate LinReg input current from vi, vo and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
-        i = io + self._ipr._interp(abs(io), abs(vi))
+        i = io + self._ipr._interp(abs(io), abs(vi[0]))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -1265,10 +1285,10 @@ class LinReg(_Component):
         return i
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate LinReg output voltage from vi, ii and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
-        v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
+        v = min(abs(self._params["vo"]), max(abs(vi[0]) - self._params["vdrop"], 0.0))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -1278,14 +1298,11 @@ class LinReg(_Component):
         return -v, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
-        """Calculate power and loss in component"""
-        if _get_opt(pstate, "off", False):
+        """Calculate power and loss in LinReg"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
         v = min(abs(self._params["vo"]), max(abs(vi) - self._params["vdrop"], 0.0))
-        if abs(vi) == 0.0 or v == 0.0:
-            loss = 0.0
-        else:
-            loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+        loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
         if abs(io) > 0.0:
             loss += (abs(vi) - abs(v)) * io
         pwr = abs(vi * ii)
@@ -1406,20 +1423,11 @@ class PSwitch(_Component):
         self._params["rt"] = abs(rt)
         self._limits = _check_limits(limits)
 
-    def _get_inp_current(self, phase, phase_conf=[]):
-        """Get initial current value for solver"""
-        i = self._ipr._interp(0.0, 0.0)
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
-            i = self._params["iis"]
-        return i
-
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
-        """Calculate component input current from vi, vo and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate PSwitch input current from vi, vo and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
-        i = io + self._ipr._interp(abs(io), abs(vi))
+        i = io + self._ipr._interp(abs(io), abs(vi[0]))
         if not phase_conf:
             pass
         elif phase not in phase_conf:
@@ -1427,26 +1435,193 @@ class PSwitch(_Component):
         return i
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
-        """Calculate component output voltage from vi, ii and io"""
-        if abs(vi) == 0.0 or _get_opt(pstate, "off", False):
+        """Calculate PSwitch output voltage from vi, ii and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
-        v = abs(vi) - self._params["rs"] * io
+        v = abs(vi[0]) - self._params["rs"] * io
         if not phase_conf:
             pass
         elif phase not in phase_conf:
             return 0.0, STATE_OFF
-        if vi >= 0.0:
+        if vi[0] >= 0.0:
             return v, STATE_DEFAULT
         return -v, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
-        """Calculate power and loss in component"""
-        if _get_opt(pstate, "off", False):
+        """Calculate power and loss in PSwitch"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 0.0, 0.0, 0.0
-        if abs(vi) == 0.0:
-            loss = 0.0
+        loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+        if abs(io) > 0.0:
+            loss += (abs(vi) - abs(vo)) * io
+        pwr = abs(vi * ii)
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            loss = abs(self._params["iis"] * vi)
+            pwr = abs(self._params["iis"] * vi)
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
+
+    def _get_annot(self):
+        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Ground current (A)",
+                "{} ground current".format(self._params["name"]),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} ground current".format(self._params["name"]),
+        ]
+
+
+class PMux(_Component):
+    """Power multiplexer/switcher.
+
+    The power mux can have up to 4 inputs and connects one of the inputs to the output in prioritized order.
+    The first input that is active (not turned off) will be selected. If all inputs are off, the output will also be off.
+    The ON resistance can be individually specified for each input. There can only be one PMux in a asystem.
+
+    The power mux ground current (ig) can be either a constant (float) or interpolated.
+    Interpolation data dict for ground current can be either 1D (function of output current only):
+
+    ``ig = {"vi":[5.0], "io":[0.005, 0.05, 0.5], "ig":[[36e-6, 37e-6, 35e-6]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``ig = {"vi":[3.3, 5.0, 12.0], "io":[0.005, 0.05, 0.5], "ig":[[5e-6, 5e-6, 5e-6], [7e-6, 7e-6, 7e-6], [36e-6, 37e-6, 35e-6]]}``
+
+    Parameters
+    ----------
+    name : str
+        Power mux name.
+    rs : float | list, optional
+        Mux on-resistance (Ohm), by default 0.0
+    ig : float | dict, optional
+        Ground current (A), by default 0.0.
+    limits : dict, optional
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
+    iis : float, optional
+        Sleep (shut-down) current (A), by default 0.0.
+    rt : float, optional
+        Thermal resistance (°C/W), by default 0.0.
+
+    Raises
+    ------
+    ValueError
+        If a parameter value is not of the correct format.
+
+    """
+
+    @property
+    def _component_type(self):
+        """Defines the PMux component type"""
+        return _ComponentTypes.PMUX
+
+    @property
+    def _child_types(self):
+        """Defines allowable PMux child component types"""
+        et = list(_ComponentTypes)
+        et.remove(_ComponentTypes.SOURCE)
+        return et
+
+    _cparams = {
+        "name": "pmux",
+        "params": {
+            "rs": {"typ": [int, float, list], "opt": True, "def": RS_DEFAULT},
+            "ig": {"typ": [int, float, dict], "opt": True, "def": IG_DEFAULT},
+            "iis": {"typ": [int, float], "opt": True, "def": IIS_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        rs: float = 0.0,
+        ig: float = 0.0,
+        limits: dict = LIMITS_DEFAULT,
+        iis: float = 0.0,
+        rt: float = 0.0,
+    ):
+        self._params = {}
+        self._params["name"] = name
+        if not isinstance(rs, list):
+            self._params["rs"] = abs(rs)
+        elif not all(isinstance(e, (int, float)) for e in rs):
+            raise ValueError("rs values must be numbers!")
+        self._params["rs"] = rs
+        if isinstance(ig, dict):
+            _check_interp(ig, "ig")
+            if np.min(ig["ig"]) < 0.0:
+                raise ValueError("ig values must be >= 0.0")
+            if len(ig["vi"]) == 1:
+                self._ipr = _Interp1d(ig["io"], ig["ig"][0])
+            else:
+                cur = []
+                volt = []
+                for v in ig["vi"]:
+                    cur += ig["io"]
+                    volt += len(ig["io"]) * [v]
+                    igi = np.asarray(ig["ig"]).reshape(1, -1)[0].tolist()
+                self._ipr = _Interp2d(cur, volt, igi)
         else:
-            loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+            self._ipr = _Interp0d(abs(ig))
+        self._params["ig"] = ig
+        self._params["iis"] = abs(iis)
+        self._params["rt"] = abs(rt)
+        self._limits = _check_limits(limits)
+
+    def _get_pri_inp(self, pstate, vi):
+        """Determine which input is prioritized"""
+        inp = -1
+        for i in range(len(pstate["off"])):
+            if pstate["off"][i] == False and abs(vi[i]) != 0.0:
+                inp = i
+                break
+        return inp
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf=[], pstate={}):
+        """Calculate PMux input current from vi, vo and io"""
+        pinp = self._get_pri_inp(pstate, vi)
+        if pinp == -1:
+            return 0.0
+        i = io + self._ipr._interp(abs(io), abs(vi[pinp]))
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            i = self._params["iis"]
+        return i
+
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf=[], pstate={}):
+        """Calculate PMux output voltage from vi, ii and io"""
+        pinp = self._get_pri_inp(pstate, vi)
+        if pinp == -1:
+            return 0.0, STATE_OFF
+        if isinstance(self._params["rs"], list):
+            if len(self._params["rs"]) < len(vi):
+                raise ValueError("rs list has too few elements")
+            r = abs(self._params["rs"][pinp])
+        else:
+            r = self._params["rs"]
+        v = abs(vi[pinp]) - r * io
+        if not phase_conf:
+            pass
+        elif phase not in phase_conf:
+            return 0.0, STATE_OFF
+        if vi[pinp] >= 0.0:
+            return v, STATE_DEFAULT
+        return -v, STATE_DEFAULT
+
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
+        """Calculate power and loss in PMux"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
+            return 0.0, 0.0, 0.0, 0.0, 0.0
+        loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
         if abs(io) > 0.0:
             loss += (abs(vi) - abs(vo)) * io
         pwr = abs(vi * ii)
