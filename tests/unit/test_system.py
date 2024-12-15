@@ -385,8 +385,6 @@ def test_case15():
     with pytest.raises(ValueError):
         case15.set_sys_phases({"N/A": 100, "rest": 1})
     with pytest.raises(ValueError):
-        case15.set_comp_phases("5V", {"active": 45e3})
-    with pytest.raises(ValueError):
         case15.set_comp_phases("Resistor", {"active": 45e3})
     assert case15.phases() == None
     phases = {"sleep": 3600, "active": 127}
@@ -621,7 +619,7 @@ def test_case20():
         pn.add_comp(["S0", "S1", "S2", "S3"], comp=PMux("PMux", rs=0.1))
         pn.add_comp("PMux", comp=PLoad("load", pwr=1))
         df = pn.solve()
-        assert df[df.Component == "PMux"]["Domain"][4] == "S{}".format(t)
+        assert df[df.Component == "PMux"]["Domain"][4] == "S{}".format(t), "Domain name"
     pm.del_comp("pmux 1")
     df = pm.solve()
     assert (
@@ -636,3 +634,29 @@ def test_case20():
     po.add_comp(["S0", "S1"], comp=PMux("PMux 1", rs=0.2))
     with pytest.raises(ValueError):
         po.add_comp(["S0", "S1"], comp=PMux("PMux 2", rs=0.2))
+
+
+def test_case21():
+    """Load phases on sources with pmux"""
+    c21 = System("Case 21", Source("12V", vo=12, rs=0.01))
+    c21.add_source(Source("12V spare", vo=12, rs=0.05))
+    c21.add_comp(["12V", "12V spare"], comp=PMux("inp mux", rs=0.025))
+    c21.add_comp("inp mux", comp=PLoad("Load", pwr=2))
+    c21_phases = {"one": 1, "two": 2, "three": 3}
+    c21.set_sys_phases(c21_phases)
+    c21.set_comp_phases("12V", phase_conf=["one"])
+    c21.set_comp_phases("12V spare", phase_conf=["three"])
+    df = c21.solve()
+    rdf = df[df.Component.str.startswith("S")].reset_index()
+    l1 = rdf[rdf.Component == "Subsystem 12V spare"]["Power (W)"].to_list()
+    assert l1[0] == 0.0 and l1[1] == 0.0, "case21: 12V spare phase one, two"
+    assert np.allclose(l1[2], 2.002086), "case21: 12V spare phase three"
+    l2 = rdf[rdf.Component == "Subsystem 12V"]["Power (W)"].to_list()
+    assert l2[1] == 0.0 and l2[2] == 0.0, "case21: 12V phase two, three"
+    assert np.allclose(l2[0], 2.000973), "case21: 12V phase one"
+    l3 = rdf[rdf.Component == "System total"]["Power (W)"].to_list()
+    assert l3[1] == 0.0, "case21: total phase two"
+    assert np.allclose(l3[0], 2.000973), "case21: total phase one"
+    assert np.allclose(l3[2], 2.002086), "case21: total phase three"
+    pdf = c21.phases()
+    assert len(pdf) == 4, "Phase report rows"

@@ -444,18 +444,26 @@ class Source(_Component):
         """Get initial state value for solver"""
         if abs(self._params["vo"]) == 0.0:
             return STATE_OFF
+        if phase_conf and phase not in phase_conf:
+            return STATE_OFF
         return STATE_DEFAULT
 
     def _get_outp_voltage(self, phase, phase_conf={}):
         """Get initial voltage value for solver"""
+        if phase_conf and phase not in phase_conf:
+            return 0.0
         return self._params["vo"]
 
     def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
         """Calculate Source input current from vi, vo and io"""
+        if phase_conf and phase not in phase_conf:
+            return 0.0
         return _calc_inp_current(self._params["vo"], io, pstate, 0)
 
     def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
         """Calculate Source output voltage from vi, ii and io"""
+        if phase_conf and phase not in phase_conf:
+            return 0.0, STATE_OFF
         if self._params["vo"] == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         vo = self._params["vo"] - self._params["rs"] * io
@@ -463,6 +471,8 @@ class Source(_Component):
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf={}, pstate={}):
         """Calculate power and loss in Source"""
+        if phase_conf and phase not in phase_conf:
+            return 0.0, 0.0, 100.0, 0.0, 0.0
         if self._params["vo"] == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, 0.0, 100.0, 0.0, 0.0
         ipwr = abs(self._params["vo"] * io)
@@ -1041,18 +1051,14 @@ class Converter(_Component):
     def _get_inp_current(self, phase, phase_conf=[]):
         """Get initial current value for solver"""
         i = self._params["iq"]
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             i = self._params["iis"]
         return i
 
     def _get_outp_voltage(self, phase, phase_conf=[]):
         """Get initial voltage value for solver"""
         v = self._params["vo"]
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             v = 0.0
         return v
 
@@ -1065,9 +1071,7 @@ class Converter(_Component):
         ):
             return 0.0
         ve = vi[0] * self._ipr._interp(abs(io), abs(vi[0]))
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             return self._params["iis"]
         if io == 0.0:
             return self._params["iq"]
@@ -1078,9 +1082,8 @@ class Converter(_Component):
         v = self._params["vo"]
         if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
-        if phase_conf:
-            if phase not in phase_conf:
-                return 0.0, STATE_OFF
+        if phase_conf and phase not in phase_conf:
+            return 0.0, STATE_OFF
         return v, STATE_DEFAULT
 
     def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
@@ -1092,10 +1095,9 @@ class Converter(_Component):
         else:
             loss = abs(ii * vi * (1.0 - self._ipr._interp(abs(io), abs(vi))))
         pwr = abs(vi * ii)
-        if phase_conf:
-            if phase not in phase_conf:
-                loss = abs(self._params["iis"] * vi)
-                pwr = abs(self._params["iis"] * vi)
+        if phase_conf and phase not in phase_conf:
+            loss = abs(self._params["iis"] * vi)
+            pwr = abs(self._params["iis"] * vi)
         tr = loss * self._params["rt"]
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
 
@@ -1258,18 +1260,14 @@ class LinReg(_Component):
     def _get_inp_current(self, phase, phase_conf=[]):
         """Get initial current value for solver"""
         i = self._ipr._interp(0.0, 0.0)
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             i = self._params["iis"]
         return i
 
     def _get_outp_voltage(self, phase, phase_conf=[]):
         """Get initial voltage value for solver"""
         v = self._params["vo"]
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             v = 0.0
         return v
 
@@ -1278,9 +1276,7 @@ class LinReg(_Component):
         if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
         i = io + self._ipr._interp(abs(io), abs(vi[0]))
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             i = self._params["iis"]
         return i
 
@@ -1289,9 +1285,7 @@ class LinReg(_Component):
         if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         v = min(abs(self._params["vo"]), max(abs(vi[0]) - self._params["vdrop"], 0.0))
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             return 0.0, STATE_OFF
         if self._params["vo"] >= 0.0:
             return v, STATE_DEFAULT
@@ -1306,9 +1300,7 @@ class LinReg(_Component):
         if abs(io) > 0.0:
             loss += (abs(vi) - abs(v)) * io
         pwr = abs(vi * ii)
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             loss = abs(self._params["iis"] * vi)
             pwr = abs(self._params["iis"] * vi)
         tr = loss * self._params["rt"]
@@ -1428,9 +1420,7 @@ class PSwitch(_Component):
         if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0
         i = io + self._ipr._interp(abs(io), abs(vi[0]))
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             i = self._params["iis"]
         return i
 
@@ -1439,9 +1429,7 @@ class PSwitch(_Component):
         if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
             return 0.0, STATE_OFF
         v = abs(vi[0]) - self._params["rs"] * io
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             return 0.0, STATE_OFF
         if vi[0] >= 0.0:
             return v, STATE_DEFAULT
@@ -1455,9 +1443,7 @@ class PSwitch(_Component):
         if abs(io) > 0.0:
             loss += (abs(vi) - abs(vo)) * io
         pwr = abs(vi * ii)
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             loss = abs(self._params["iis"] * vi)
             pwr = abs(self._params["iis"] * vi)
         tr = loss * self._params["rt"]
@@ -1591,9 +1577,7 @@ class PMux(_Component):
         if pinp == -1:
             return 0.0
         i = io + self._ipr._interp(abs(io), abs(vi[pinp]))
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             i = self._params["iis"]
         return i
 
@@ -1609,9 +1593,7 @@ class PMux(_Component):
         else:
             r = self._params["rs"]
         v = abs(vi[pinp]) - r * io
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             return 0.0, STATE_OFF
         if vi[pinp] >= 0.0:
             return v, STATE_DEFAULT
@@ -1625,9 +1607,7 @@ class PMux(_Component):
         if abs(io) > 0.0:
             loss += (abs(vi) - abs(vo)) * io
         pwr = abs(vi * ii)
-        if not phase_conf:
-            pass
-        elif phase not in phase_conf:
+        if phase_conf and phase not in phase_conf:
             loss = abs(self._params["iis"] * vi)
             pwr = abs(self._params["iis"] * vi)
         tr = loss * self._params["rt"]

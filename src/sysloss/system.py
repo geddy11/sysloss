@@ -726,7 +726,6 @@ class System:
                 vc = [v[i] for i in pp]
                 pstate["off"] = [state[i]["off"][0] for i in pp]
             pinp = self._g[c]._get_pri_inp(pstate, vc)
-            # print("cc", pinp, node, c, pp, vc, pstate)
             if pinp != -1 and len(pp) > 1:
                 if pp[pinp] == node:
                     io += i[c]
@@ -753,7 +752,6 @@ class System:
             if self._childs[n] != -1:  # not leaf
                 # sum currents into childs
                 io = self._child_curr(n, i, v, state)
-
             vo[n], ostate[n] = self._g[n]._solv_outp_volt(
                 vi, ii, io, phase, phase_config, pstate
             )
@@ -778,7 +776,6 @@ class System:
                 vo = v[n]
                 # sum currents into childs
                 io = self._child_curr(n, i, v, state)
-                # print(n, i, v, pstate, io)
             ii[n] = self._g[n]._solv_inp_curr(vi, vo, io, phase, phase_config, pstate)
 
         return ii
@@ -1412,7 +1409,7 @@ class System:
 
         Components that have no load phases defined are always active.
 
-        The :py:class:`~components.Converter`, :py:class:`~components.Linreg`,
+        The :py:class:`~components.Source`, :py:class:`~components.Converter`, :py:class:`~components.Linreg`,
         :py:class:`~components.PSwitch` and :py:class:`~components.PMux`
         components support a list of active phases, and go
         into sleep mode if not active. In sleep mode, all components connected to the
@@ -1444,8 +1441,6 @@ class System:
             raise ValueError("Component name does not exist!")
         if not isinstance(phase_conf, dict) and not isinstance(phase_conf, list):
             raise ValueError("phase_conf must be a dict or list!")
-        if isinstance(self._g[cidx], Source):
-            raise ValueError("Source components does not support load phases!")
         if isinstance(self._g[cidx], RLoss) or isinstance(self._g[cidx], VLoss):
             raise ValueError("Loss components does not support load phases!")
 
@@ -1479,13 +1474,14 @@ class System:
                 dname = self._g[n]._params["name"]
                 src_cnt += 1
             ph_names = []
-            if tname == "SOURCE" or tname == "SLOSS":
+            if tname == "SLOSS":
                 ph_names += ["N/A"]
             elif (
                 tname == "CONVERTER"
                 or tname == "LINREG"
                 or tname == "PSWITCH"
                 or tname == "PMUX"
+                or tname == "SOURCE"
             ):
                 if len(self._phase_lkup[n]) > 0:
                     for p in phase_names:
@@ -1506,19 +1502,6 @@ class System:
                 typ += [tname]
                 domain += [dname]
                 phase += [p]
-                if tname == "SOURCE" or tname == "SLOSS":
-                    rs += [""]
-                    ii += [""]
-                    pwr += [""]
-                    break
-                if tname == "CONVERTER" or tname == "LINREG":
-                    rs += [""]
-                    ii += [""]
-                    pwr += [""]
-                if tname == "PSWITCH":
-                    rs += [self._g[n]._params["rs"]]
-                    ii += [""]
-                    pwr += [""]
                 if tname == "LOAD":
                     if "pwr" in self._g[n]._params:
                         rs += [""]
@@ -1541,6 +1524,10 @@ class System:
                             ii += [self._g[n]._params["ii"]]
                         else:
                             ii += [self._phase_lkup[n][p]]
+                else:
+                    rs += [""]
+                    ii += [""]
+                    pwr += [""]
 
         # report
         res = {}
