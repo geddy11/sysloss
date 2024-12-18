@@ -270,6 +270,19 @@ class System:
                                     rt=rt,
                                 ),
                             )
+                        elif c["type"] == "RECTIFIER":
+                            vdrop = _get_opt(c["params"], "vdrop", 0.0)
+                            self.add_comp(
+                                p,
+                                comp=Rectifier(
+                                    cname,
+                                    rs=rs,
+                                    ig=ig,
+                                    iq=iq,
+                                    limits=limits,
+                                    rt=rt,
+                                ),
+                            )
         phases = _get_opt(sysparams, "phases", {})
         self._g.attrs["phases"] = phases
         phase_conf = _get_mand(sysparams, "phase_conf")
@@ -1298,6 +1311,7 @@ class System:
         res = {}
         res["Component"] = names
         res["Type"] = typ
+        limstr = ""
         if params:
             res["vo (V)"] = vo
             res["vdrop (V)"] = vdrop
@@ -1311,17 +1325,18 @@ class System:
             res["pwr (W)"] = pwr
             res["pwrs (W)"] = pwrs
             res["loss"] = loss
+            limstr = "limit"
         if limits:
-            res["vi limit (V)"] = lvi
-            res["vo limit (V)"] = lvo
-            res["vd limit (V)"] = lvd
-            res["ii limit (A)"] = lii
-            res["io limit (A)"] = lio
-            res["pi limit (W)"] = lpi
-            res["po limit (W)"] = lpo
-            res["pl limit (W)"] = lpl
-            res["tr limit (°C)"] = ltr
-            res["tp limit (°C)"] = ltp
+            res["vi {} (V)".format(limstr)] = lvi
+            res["vo {} (V)".format(limstr)] = lvo
+            res["vd {} (V)".format(limstr)] = lvd
+            res["ii {} (A)".format(limstr)] = lii
+            res["io {} (A)".format(limstr)] = lio
+            res["pi {} (W)".format(limstr)] = lpi
+            res["po {} (W)".format(limstr)] = lpo
+            res["pl {} (W)".format(limstr)] = lpl
+            res["tr {} (°C)".format(limstr)] = ltr
+            res["tp {} (°C)".format(limstr)] = ltp
         return pd.DataFrame(res)
 
     def params(self, limits: bool = False) -> pd.DataFrame:

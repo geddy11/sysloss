@@ -36,7 +36,8 @@ def test_case1():
         "Case1 system", Source("3V coin", vo=3, rs=13e-3), group="42", rail="SYS_3V"
     )
     case1.add_source(Source("USB", vo=5, rs=0.1))
-    case1.add_comp(["SYS_3V", "USB"], comp=PMux("Pmux", rs=0.01))
+    case1.add_comp("USB", comp=Rectifier("Bridge", vdrop=0.25))
+    case1.add_comp(["SYS_3V", "Bridge"], comp=PMux("Pmux", rs=0.01))
     case1.add_comp("Pmux", comp=Converter("1.8V buck", vo=1.8, eff=0.87, iq=12e-6))
     case1.add_comp("1.8V buck", comp=PLoad("MCU", pwr=27e-3))
     case1.add_comp("Pmux", comp=Converter("5V boost", vo=5, eff=0.91, iq=42e-6))
@@ -56,7 +57,7 @@ def test_case1():
     with pytest.raises(RuntimeError):
         case1.solve(maxiter=1)
     df = case1.solve(quiet=False)
-    rows = 17
+    rows = 18
     assert df.shape[0] == rows, "Case1 solution row count"
     assert df.shape[1] == 14, "Case1 solution column count"
     df = case1.solve(tags={"Battery": "small", "Interval": "fast"})

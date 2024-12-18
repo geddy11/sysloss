@@ -360,3 +360,93 @@ def test_component():
     ], "Check _Component annotation labels"
     with pytest.raises(ValueError):
         _Component.from_file("Test", fname="tests/data/component.toml")
+
+
+def test_rectifier():
+    """Check Rectifier component"""
+    # diode mode
+    la = Rectifier("Rectifier 1", vdrop=1.7, limits=LIMITS_DEFAULT)
+    assert (
+        la._component_type == _ComponentTypes.RECTIFIER
+    ), "Rectifier(d) component type"
+    assert _ComponentTypes.SOURCE not in list(
+        la._child_types
+    ), "Rectifier(d) child types"
+    lb = Rectifier.from_file("Rectifier 1", fname="tests/data/rect1.toml")
+    assert la._params == lb._params, "Rectifier(d) parameters from file"
+    assert la._limits == lb._limits, "Rectifier(d) limits from file"
+    assert isinstance(la, _ComponentInterface), "instance Rectifier(d)"
+    vdata = {"vi": [4.5], "io": [0.1, 0.4, 0.6, 0.9], "vdrop": [[0.3, 0.4, 0.67, 0.89]]}
+    lc = Rectifier("Conv 1D", vdrop=vdata)
+    assert close(lc._ipr._interp(0.25, 100), 0.35), "Rectifier(d) 1D interpolation"
+    assert lc._get_annot() == [
+        "Output current (A)",
+        "Voltage drop (V)",
+        "Conv 1D voltage drop",
+    ]
+    vdata["io"][-1] = 0.59
+    with pytest.raises(ValueError):
+        lc = Rectifier("Rectifier(d) 1D interpolation, io non-monotonic", vdrop=vdata)
+    vdata = {
+        "vi": [4.5, 12],
+        "io": [0.1, 0.4, 0.6],
+        "vdrop": [[0.3, 0.4, 0.67], [0.4, 0.55, 0.78]],
+    }
+    lc = Rectifier("Rectifier(d) 2D", vdrop=vdata)
+    assert close(
+        lc._ipr._interp(0.0, 100), vdata["vdrop"][1][0]
+    ), "Rectifier(d) 2D interpolation"
+    assert lc._get_annot() == [
+        "Output current (A)",
+        "Input voltage (V)",
+        "Rectifier(d) 2D voltage drop",
+    ]
+    # mosfet mode
+    la = Rectifier(
+        "Rectifier 1", rs=0.012, ig=2.2e-3, iq=1.2e-6, limits=LIMITS_DEFAULT, rt=6.77
+    )
+    assert (
+        la._component_type == _ComponentTypes.RECTIFIER
+    ), "Rectifier(m) component type"
+    assert _ComponentTypes.SOURCE not in list(
+        la._child_types
+    ), "Rectifier(m) child types"
+    lb = Rectifier.from_file("Rectifier 1", fname="tests/data/rect2.toml")
+    assert la._params == lb._params, "Rectifier(m) parameters from file"
+    assert la._limits == lb._limits, "Rectifier(m) limits from file"
+    assert isinstance(la, _ComponentInterface), "instance Rectifier(m)"
+    idata = {
+        "vi": [4.5, 24.0],
+        "io": [0.1, 0.4, 0.6, 0.97],
+        "ig": [[0.3, 0.4, 0.67, 0.79], [0.4, 0.5, 0.77, 0.89]],
+    }
+    lc = Rectifier("Conv 1D", rs=5.6, ig=idata, iq=3e-4)
+    assert close(lc._ipr._interp(0.25, 100), 0.45), "Rectifier(m) 1D interpolation"
+    assert lc._get_annot() == [
+        "Output current (A)",
+        "Input voltage (V)",
+        "Conv 1D ground current",
+    ]
+    idata["io"][-1] = 0.599
+    with pytest.raises(ValueError):
+        Rectifier("Rectifier(m) 1D interpolation, io non-monotonic", ig=idata)
+    idata["io"][-1] = 0.77
+    idata["ig"][1][0] = -0.01
+    with pytest.raises(ValueError):
+        Rectifier("Rectifier(m) 1D interpolation, io non-monotonic", ig=idata)
+    with pytest.raises(ValueError):
+        Rectifier(
+            "Rectifier 1", rs="tret", ig=2.2e-3, iq=1.2e-6
+        ), "Rectifier(m) rs=non  number"
+    with pytest.raises(ValueError):
+        Rectifier(
+            "Rectifier 1", rs=[[], "tst"], ig=2.2e-3, iq=1.2e-6
+        ), "Rectifier(m) rs=non  number"
+    idata = {"vi": [45], "io": [0.1, 0.4, 0.6, 0.9], "ig": [[0.3, 0.4, 0.67, 0.89]]}
+    ld = Rectifier("Conv 1D", ig=idata)
+    assert close(ld._ipr._interp(0.25, 100), 0.35), "Rectifier(m) 1D interpolation"
+    assert ld._get_annot() == [
+        "Output current (A)",
+        "Ground current (A)",
+        "Conv 1D ground current",
+    ]

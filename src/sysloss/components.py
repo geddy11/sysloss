@@ -54,6 +54,7 @@ __all__ = [
     "LinReg",
     "PSwitch",
     "PMux",
+    "Rectifier",
 ]
 
 
@@ -68,6 +69,7 @@ class _ComponentTypes(Enum):
     LINREG = 5
     PSWITCH = 6
     PMUX = 7
+    RECTIFIER = 8
 
 
 MAX_DEFAULT = 1.0e6
@@ -930,10 +932,10 @@ class VLoss(RLoss):
         loss = abs(vi - vout) * io
         pwr = abs(vi * ii)
         tr = loss * self._params["rt"]
-        return pwr, loss, _get_eff(pwr, pwr - loss, 100.0), tr, ta + tr
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
 
     def _get_annot(self):
-        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        """Get VLoss interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
             return [
                 "Output current (A)",
@@ -1102,7 +1104,7 @@ class Converter(_Component):
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
 
     def _get_annot(self):
-        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        """Get Converter interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
             return [
                 "Output current (A)",
@@ -1307,7 +1309,7 @@ class LinReg(_Component):
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
 
     def _get_annot(self):
-        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        """Get LinReg interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
             return [
                 "Output current (A)",
@@ -1450,7 +1452,7 @@ class PSwitch(_Component):
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
 
     def _get_annot(self):
-        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        """Get PSwitch interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
             return [
                 "Output current (A)",
@@ -1614,7 +1616,7 @@ class PMux(_Component):
         return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
 
     def _get_annot(self):
-        """Get interpolation figure annotations in format [xlabel, ylabel, title]"""
+        """Get PMux interpolation figure annotations in format [xlabel, ylabel, title]"""
         if isinstance(self._ipr, _Interp1d):
             return [
                 "Output current (A)",
@@ -1625,4 +1627,216 @@ class PMux(_Component):
             "Output current (A)",
             "Input voltage (V)",
             "{} ground current".format(self._params["name"]),
+        ]
+
+
+class Rectifier(_Component):
+    """Full bridge rectifier.
+
+    If the voltage drop (vdrop) is set to non-zero, a diode rectifier will be modelled. The rs, ig, iq and iis
+    parameters are then ignored. Note that vdrop represents the forward voltage of a single diode. Total voltage drop
+    will be 2 x vdrop. The voltage drop can be either a constant (float) or interpolated.
+    Interpolation data dict for voltage drop can be either 1D (function of output current only):
+
+    ``vdrop= {"vi":[2.5], "io":[0.1, 0.5, 0.9], "vdrop":[[0.23, 0.41, 0.477]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``vdrop = {"vi":[2.5, 5.0, 12.0], "io":[0.1, 0.5, 0.9], "vdrop":[[0.23, 0.34, 0.477], [0.27, 0.39, 0.51], [0.3, 0.41, 0.57]]}``
+
+    If the vdrop parameter is zero, a MOSFET bridge will be modelled. The parameters rs, ig, iq and iis then apply. Note that rs
+    represents the resistance in a single MOSFET. Total resistance in bridge will be 2 x rs. The rectifier ground current (ig) can
+    be either a constant (float) or interpolated.
+    Interpolation data dict for ground current can be either 1D (function of output current only):
+
+    ``ig = {"vi":[5.0], "io":[0.005, 0.05, 0.5], "ig":[[36e-6, 37e-6, 35e-6]]}``
+
+    Or 2D (function of input voltage and output current):
+
+    ``ig = {"vi":[3.3, 5.0, 12.0], "io":[0.005, 0.05, 0.5], "ig":[[5e-6, 5e-6, 5e-6], [7e-6, 7e-6, 7e-6], [36e-6, 37e-6, 35e-6]]}``
+
+    The output voltage of the rectifier is always positive (or zero).
+
+    Parameters
+    ----------
+    name : str
+        Rectifier name.
+    vdrop : float | dict
+        Voltage drop (V), a constant value (float) or interpolation data (dict).
+    rs : float | list, optional
+        Mosfet (each) on-resistance (Ohm), by default 0.0
+    ig : float | dict, optional
+        Total ground current (A), by default 0.0.
+    iq : float, optional
+        Quiescent (no-load) current (A), by default 0.0.
+    limits : dict, optional
+        Voltage, current and power limits, by default LIMITS_DEFAULT. The following limits apply: vi, vo, vd, ii, io, pi, po, pl, tr, tp
+    rt : float, optional
+        Thermal resistance (°C/W), by default 0.0.
+
+    Raises
+    ------
+    ValueError
+        If a parameter value is not of the correct format.
+
+    """
+
+    @property
+    def _component_type(self):
+        """Defines the Rectifier component type"""
+        return _ComponentTypes.RECTIFIER
+
+    @property
+    def _child_types(self):
+        """Defines allowable Rectifier child component types"""
+        et = list(_ComponentTypes)
+        et.remove(_ComponentTypes.SOURCE)
+        return et
+
+    _cparams = {
+        "name": "rectifier",
+        "params": {
+            "vdrop": {"typ": [int, float, dict], "opt": False},
+            "rs": {"typ": [int, float, list], "opt": True, "def": RS_DEFAULT},
+            "ig": {"typ": [int, float, dict], "opt": True, "def": IG_DEFAULT},
+            "iq": {"typ": [int, float], "opt": True, "def": IQ_DEFAULT},
+            "rt": {"typ": [int, float], "opt": True, "def": RT_DEFAULT},
+        },
+    }
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        vdrop: float | dict = 0.0,
+        rs: float = 0.0,
+        ig: float = 0.0,
+        iq: float = 0.0,
+        limits: dict = LIMITS_DEFAULT,
+        rt: float = 0.0,
+    ):
+        self._params = {}
+        self._params["name"] = name
+        if vdrop != 0.0:
+            self._params["type"] = "diode"
+            if isinstance(vdrop, dict):
+                _check_interp(vdrop, "vdrop")
+                if len(vdrop["vi"]) == 1:
+                    self._ipr = _Interp1d(vdrop["io"], vdrop["vdrop"][0])
+                else:
+                    cur = []
+                    volt = []
+                    for v in vdrop["vi"]:
+                        cur += vdrop["io"]
+                        volt += len(vdrop["io"]) * [v]
+                        vd = np.asarray(vdrop["vdrop"]).reshape(1, -1)[0].tolist()
+                    self._ipr = _Interp2d(cur, volt, vd)
+                self._params["vdrop"] = vdrop
+            else:
+                self._params["vdrop"] = abs(vdrop)
+                self._ipr = _Interp0d(abs(vdrop))
+        else:
+            self._params["type"] = "mosfet"
+            if not isinstance(rs, list):
+                if not isinstance(rs, (int, float)):
+                    raise ValueError("rs values must be numbers!")
+                self._params["rs"] = abs(rs)
+            elif not all(isinstance(e, (int, float)) for e in rs):
+                raise ValueError("rs values must be numbers!")
+            self._params["rs"] = rs
+            if isinstance(ig, dict):
+                _check_interp(ig, "ig")
+                if np.min(ig["ig"]) < 0.0:
+                    raise ValueError("ig values must be >= 0.0")
+                if len(ig["vi"]) == 1:
+                    self._ipr = _Interp1d(ig["io"], ig["ig"][0])
+                else:
+                    cur = []
+                    volt = []
+                    for v in ig["vi"]:
+                        cur += ig["io"]
+                        volt += len(ig["io"]) * [v]
+                        igi = np.asarray(ig["ig"]).reshape(1, -1)[0].tolist()
+                    self._ipr = _Interp2d(cur, volt, igi)
+            else:
+                self._ipr = _Interp0d(abs(ig))
+            self._params["ig"] = ig
+            self._params["iq"] = abs(iq)
+        # common params
+        self._params["rt"] = abs(rt)
+        self._limits = _check_limits(limits)
+
+    def _solv_inp_curr(self, vi, vo, io, phase, phase_conf={}, pstate={}):
+        """Calculate Rectifier input current from vi, vo and io"""
+        if self._params["type"] == "diode":
+            return _calc_inp_current(vi[0], io, pstate, 0)
+        if io == 0.0:
+            i = self._params["iq"]
+        else:
+            i = io + self._ipr._interp(abs(io), abs(vi[0]))
+        return _calc_inp_current(vi[0], i, pstate, 0)
+
+    def _solv_outp_volt(self, vi, ii, io, phase, phase_conf={}, pstate={}):
+        """Calculate Rectifier output voltage from vi, ii and io"""
+        if abs(vi[0]) == 0.0 or _get_lopt(pstate, "off", 0, False):
+            return 0.0, STATE_OFF
+        if self._params["type"] == "diode":
+            vo = vi[0] - 2 * self._ipr._interp(abs(io), abs(vi[0])) * np.sign(vi[0])
+            if np.sign(vo) == np.sign(vi[0]):
+                return abs(vo), STATE_DEFAULT
+            raise ValueError(
+                "Unstable system: Rectifier component '{}' has zero output voltage".format(
+                    self._params["name"]
+                )
+            )
+        # mosfet mode
+        v = abs(vi[0]) - 2 * self._params["rs"] * io
+        return abs(v), STATE_DEFAULT
+
+    def _solv_pwr_loss(self, vi, vo, ii, io, ta, phase, phase_conf=[], pstate={}):
+        """Calculate power and loss in Rectifier"""
+        if abs(vi) == 0.0 or _get_lopt(pstate, "off", 0, False):
+            return 0.0, 0.0, 0.0, 0.0, 0.0
+        if self._params["type"] == "diode":
+            vout = vi - 2 * self._ipr._interp(abs(io), abs(vi)) * np.sign(vi)
+            if np.sign(vout) != np.sign(vi) or _get_lopt(pstate, "off", 0, False):
+                return 0.0, 0.0, 0.0, 0.0, 0.0
+            loss = abs(vi - vout) * io
+            pwr = abs(vi * ii)
+            tr = loss * self._params["rt"]
+            return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, ta + tr
+        # mosfet mode
+        if abs(io) == 0.0:
+            loss = self._params["iq"] * abs(vi)
+        else:
+            loss = self._ipr._interp(abs(io), abs(vi)) * abs(vi)
+            loss += 2 * self._params["rs"] * abs(io) ** 2
+        pwr = abs(vi * ii)
+        tr = loss * self._params["rt"]
+        return pwr, loss, _get_eff(pwr, pwr - loss, 0.0), tr, tr + ta
+
+    def _get_annot(self):
+        """Get Rectifier interpolation figure annotations in format [xlabel, ylabel, title]"""
+        if self._params["type"] == "mosfet":
+            if isinstance(self._ipr, _Interp1d):
+                return [
+                    "Output current (A)",
+                    "Ground current (A)",
+                    "{} ground current".format(self._params["name"]),
+                ]
+            return [
+                "Output current (A)",
+                "Input voltage (V)",
+                "{} ground current".format(self._params["name"]),
+            ]
+        if isinstance(self._ipr, _Interp1d):
+            return [
+                "Output current (A)",
+                "Voltage drop (V)",
+                "{} voltage drop".format(self._params["name"]),
+            ]
+        return [
+            "Output current (A)",
+            "Input voltage (V)",
+            "{} voltage drop".format(self._params["name"]),
         ]

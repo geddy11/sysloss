@@ -22,6 +22,7 @@
 
 import pytest
 import numpy as np
+import random
 from sysloss.components import *
 
 # [vi, vo, io, phase]
@@ -227,7 +228,7 @@ def test_vloss(vloss, name, vdrop, rt):
         assert close(pwr, epwr), "Check VLoss power"
         eloss = 0.0 if plt[0] == 0.0 or not valid else abs(plt[0] - vo) * plt[3]
         assert close(los, eloss), "Check VLoss loss"
-        ef = 100.0
+        ef = 0.0
         if epwr > 0.0:
             ef = 100.0 * abs((epwr - eloss) / epwr)
         if not valid:
@@ -845,3 +846,161 @@ def test_pmux(pmux, name, rs, ig, iis, rt, active_phases):
             assert close(tr, eloss * rt), "Check PMux temperature rise"
             if eloss * rt > 0.0:
                 assert close(tp, 125.0 + eloss * rt), "Check PMux peak temperature"
+
+
+#
+# Rectifier - Diode mode
+#
+@pytest.fixture()
+def rectifier_d(name, vdrop, rt):
+    """Return a Rectifier object."""
+    return Rectifier(
+        name,
+        vdrop=vdrop,
+        rs=random.uniform(0.0, 4.3),
+        ig=random.uniform(0.0, 1.2e-3),
+        iq=random.uniform(0.0, 1.5e-4),
+        rt=rt,
+    )
+
+
+@pytest.mark.parametrize(
+    "name, vdrop, rt",
+    [("V pos", 5.0, 10.0), ("V neg", -1.77, 1.0), ("V almost zero", 0.1, 5.0)],
+)
+def test_rectifier_d(rectifier_d, name, vdrop, rt):
+    """Test Rectifier(d) object with different parameters"""
+    assert rectifier_d._params["name"] == name, "Check Rectifier(d) name"
+    assert rectifier_d._params["type"] == "diode", "Check Rectifier(d) type"
+
+    state = {}
+    for ict in INP_CURR_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = [s]
+            ii = 0.0 if ict[0] == 0.0 or s else ict[2]
+            assert close(
+                rectifier_d._solv_inp_curr([ict[0]], ict[1], ict[2], ict[3], {}, state),
+                ii,
+            ), "Check Rectifier(d) input current"
+    for ovt in OUTP_VOLT_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = [s]
+            v = 0.0 if ovt[0] == 0.0 else ovt[0] - 2 * abs(vdrop) * np.sign(ovt[0])
+            if np.sign(v) != np.sign(ovt[0]) or s:
+                v = 0.0
+            if ovt[0] == 4.7 and name == "V pos" and not s:
+                with pytest.raises(ValueError):
+                    rectifier_d._solv_outp_volt(
+                        [ovt[0]], ovt[1], ovt[2], ovt[3], {}, state
+                    )
+            else:
+                vs, vstate = rectifier_d._solv_outp_volt(
+                    [ovt[0]], ovt[1], ovt[2], ovt[3], {}, state
+                )
+                assert close(vs, abs(v)), "Check Rectifier(d) output voltage"
+                if ovt[0] == 0.0:
+                    assert vstate["off"] == [True], "Check Rectifier(d) state"
+                else:
+                    assert vstate["off"] == [s], "Check Rectifier(d) state"
+    for plt in PWR_LOSS_TESTS:
+        pwr, los, eff, tr, tp = rectifier_d._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], 85.0, plt[4], {}
+        )
+        vo = plt[0] - 2 * abs(vdrop) * np.sign(plt[0])
+        valid = True if np.sign(vo) == np.sign(plt[0]) else False
+        epwr = abs(plt[0] * plt[2]) if valid else 0.0
+        assert close(pwr, epwr), "Check Rectifier(d) power"
+        eloss = 0.0 if plt[0] == 0.0 or not valid else abs(plt[0] - vo) * plt[3]
+        assert close(los, eloss), "Check Rectifier(d) loss"
+        ef = 0.0
+        if epwr > 0.0:
+            ef = 100.0 * abs((epwr - eloss) / epwr)
+        if not valid:
+            ef = 0.0
+        assert close(eff, ef), "Check Rectifier(d) efficiency"
+        assert close(tr, los * rt), "Check Rectifier(d) temperature rise"
+        if los * rt > 0.0:
+            assert close(tp, 85.0 + los * rt), "Check Rectifier(d) peak temperature"
+
+
+#
+# Rectifier - mosfet mode
+#
+@pytest.fixture()
+def rectifier_m(name, rs, ig, iq, rt):
+    """Return a Rectifier(m) object."""
+    return Rectifier(name, vdrop=0.0, rs=rs, ig=ig, iq=iq, rt=rt)
+
+
+@pytest.mark.parametrize(
+    "name, rs, ig, iq, rt",
+    [
+        ("One", 0.012, 1e-5, 1e-6, 11.9),
+        ("Two", 0.88, 1.7e-4, 2e-5, 130.0),
+        ("Three", 0.67, 1e-3, 1.2e-4, 34.5),
+    ],
+)
+def test_rectifier_m(rectifier_m, name, rs, ig, iq, rt):
+    """Test Rectifier(m) object with different parameters"""
+    assert rectifier_m._params["name"] == name, "Check Rectifier(m) name"
+    assert rectifier_m._params["type"] == "mosfet", "Check Rectifier(m) type"
+
+    state = {}
+    for ict in INP_CURR_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = [s]
+            if ict[0] == 0.0 or s:
+                ii = 0.0
+            elif ict[2] == 0.0:
+                ii = iq
+            else:
+                ii = ict[2] + ig
+            assert close(
+                rectifier_m._solv_inp_curr([ict[0]], ict[1], ict[2], ict[3], {}, state),
+                ii,
+            ), "Check Rectifier(m) input current"
+    for ovt in OUTP_VOLT_TESTS:
+        for s in VINOFF_STATES:
+            state["off"] = [s]
+            if ovt[0] >= 0.0:
+                v = ovt[0] - 2 * rs * ovt[2]
+            else:
+                v = ovt[0] + 2 * rs * ovt[2]
+            if ovt[0] == 0.0 or s:
+                v = 0.0
+            vs, vstate = rectifier_m._solv_outp_volt(
+                [ovt[0]], ovt[1], ovt[2], ovt[3], {}, state
+            )
+            assert close(vs, abs(v)), "Check Rectifier(m) output voltage"
+            if ovt[0] == 0.0 or s:
+                assert vstate["off"] == [True], "Check Rectifier(m) state"
+            else:
+                assert vstate["off"] == [s], "Check Rectifier(m) state"
+    for plt in PWR_LOSS_TESTS:
+        pwr, loss, eff, tr, tp = rectifier_m._solv_pwr_loss(
+            plt[0], plt[1], plt[2], plt[3], 125.0, plt[4], {}
+        )
+        ipwr = abs(plt[0] * plt[2])
+        if plt[0] >= 0.0:
+            v = plt[0] - 2 * rs * ovt[2]
+        else:
+            v = plt[0] + 2 * rs * ovt[2]
+        if plt[0] == 0.0:
+            eloss = 0.0
+        elif plt[3] == 0.0:
+            eloss = abs(iq * plt[0])
+        else:
+            eloss = abs(ig * plt[0]) + 2 * rs * plt[3] ** 2
+        assert close(pwr, ipwr), "Check Rectifier(m) power"
+        assert close(loss, eloss), "Check Rectifier(m) loss"
+        if ipwr == 0.0 or v == 0.0:
+            eeff = 0.0
+        opwr = ipwr - eloss
+        if ipwr == 0.0:
+            eeff = 0.0
+        else:
+            eeff = 100.0 * abs(opwr / ipwr)
+        assert close(eff, eeff), "Check Rectifier(m) efficiency"
+        assert close(tr, eloss * rt), "Check Rectifier(m) temperature rise"
+        if eloss * rt > 0.0:
+            assert close(tp, 125.0 + eloss * rt), "Check Rectifier(m) peak temperature"
