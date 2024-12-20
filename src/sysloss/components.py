@@ -1471,7 +1471,7 @@ class PMux(_Component):
 
     The power mux can have up to 4 inputs and connects one of the inputs to the output in prioritized order.
     The first input that is active (not turned off) will be selected. If all inputs are off, the output will also be off.
-    The ON resistance can be individually specified for each input. There can only be one PMux in a asystem.
+    The ON resistance can be individually specified for each input. There can only be one PMux in a a system.
 
     The power mux ground current (ig) can be either a constant (float) or interpolated.
     Interpolation data dict for ground current can be either 1D (function of output current only):
@@ -1662,9 +1662,9 @@ class Rectifier(_Component):
     name : str
         Rectifier name.
     vdrop : float | dict
-        Voltage drop (V), a constant value (float) or interpolation data (dict).
+        Diode (each) voltage drop (V), a constant value (float) or interpolation data (dict).
     rs : float | list, optional
-        Mosfet (each) on-resistance (Ohm), by default 0.0
+        MOSFET (each) on-resistance (Ohm), by default 0.0
     ig : float | dict, optional
         Total ground current (A), by default 0.0.
     iq : float, optional
