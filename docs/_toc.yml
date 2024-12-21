@@ -11,6 +11,7 @@ chapters:
   sections:
   - file: nb/Bluetooth sensor
   - file: nb/Battery life
+  - file: nb/PoE
   - file: nb/Sensor daisy chain
   - file: nb/PCIe FPGA
   - file: nb/Datacenter rack
