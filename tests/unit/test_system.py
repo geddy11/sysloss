@@ -158,9 +158,9 @@ def test_case5b():
     with pytest.raises(ValueError):
         case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
     igdata = {
-        "vi": [5.0],
-        "io": [0.0, 0.4, 0.6, 0.8],
-        "ig": [[-0.3, -0.4, -0.67, -0.89]],
+        "vi": [4.5],
+        "io": [0.0, 0.3, 0.55, 0.75],
+        "ig": [[-0.2, -0.3, -0.5, -0.78]],
     }
     with pytest.raises(ValueError):
         case5b.add_comp("5V system", comp=LinReg("LDO 3.3", vo=3.3, ig=igdata))
@@ -192,7 +192,11 @@ def test_case5b():
 def test_case5c():
     """PSwitch with invalid interpolation parameter"""
     case5c = System("Case5c system", Source("5V system", vo=5.0))
-    igdata = {"vi": [5.0], "io": [0.1, 0.4, 0.6, 0.5], "ig": [[0.3, 0.4, 0.67, 0.89]]}
+    igdata = {
+        "vi": [3.3],
+        "io": [0.11, 0.41, 0.61, 0.51],
+        "ig": [[0.3, 0.4, 0.67, 0.89]],
+    }
     with pytest.raises(ValueError):
         case5c.add_comp("5V system", comp=PSwitch("PSwitch", rs=3.3, ig=igdata))
     igdata = {

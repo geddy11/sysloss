@@ -148,6 +148,7 @@ class System:
             )
         # add sources/pmux
         for e in range(1, len(entires)):
+            vo = 0.0
             if sys[entires[e]]["type"] == "SOURCE":
                 vo = _get_mand(sys[entires[e]]["params"], "vo")
             rs = _get_opt(sys[entires[e]]["params"], "rs", RS_DEFAULT)

@@ -298,17 +298,17 @@ def test_pmux():
     assert pa._limits == pc._limits, "PMux limits from file"
     pd = PMux(
         "P-mux",
-        rs=[0.33, 0.42],
+        rs=[0.31, 0.47],
         ig={
-            "vi": [1.9, 5.8, 12.5],
-            "io": [0.002, 0.02, 0.2],
+            "vi": [2.3, 4.7, 11.8],
+            "io": [0.001, 0.015, 0.22],
             "ig": [
-                [3.0e-6, 3.0e-6, 4.0e-6],
-                [9.0e-6, 9.0e-6, 99.0e-6],
-                [56.0e-6, 67.0e-6, 77.0e-6],
+                [3.1e-5, 3.2e-5, 4.2e-5],
+                [7.8e-5, 8.8e-5, 97.0e-5],
+                [52.0e-5, 62.0e-5, 72.0e-5],
             ],
         },
-        iis=0.57e-6,
+        iis=0.67e-5,
     )
     with pytest.raises(ValueError):
         pd._solv_outp_volt(

@@ -857,9 +857,9 @@ def rectifier_d(name, vdrop, rt):
     return Rectifier(
         name,
         vdrop=vdrop,
-        rs=random.uniform(0.0, 4.3),
-        ig=random.uniform(0.0, 1.2e-3),
-        iq=random.uniform(0.0, 1.5e-4),
+        rs=random.SystemRandom().uniform(0.0, 4.3),
+        ig=random.SystemRandom().uniform(0.0, 1.2e-3),
+        iq=random.SystemRandom().uniform(0.0, 1.5e-4),
         rt=rt,
     )
 
