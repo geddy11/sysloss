@@ -1,4 +1,4 @@
-# CHANGELOG
+# Changelog
 
 
 ## v1.8.0 (2024-12-21)

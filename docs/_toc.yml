@@ -17,3 +17,4 @@ chapters:
   - file: nb/Datacenter rack
   - file: nb/ROV battery pack
 - file: refs
+- file: log.md

@@ -105,7 +105,7 @@ def make_diag(sys: System, *, fname: str = None, group: bool = True, config: dic
     fname : str, optional
         Filename for output image. File extension defines image format.
     group : bool, optional
-        Cluster components based on group names, by default False.
+        Cluster components based on group names, by default True.
     config: dict, optional
         Graphviz configuration.
 
