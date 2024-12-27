@@ -25,6 +25,7 @@ from sysloss.system import System
 from sysloss.components import *
 
 
+@pytest.mark.benchmark
 def test_sys1(sys1: System, benchmark):
     """Benchmark 1"""
 
@@ -32,9 +33,9 @@ def test_sys1(sys1: System, benchmark):
         sys1.solve()
 
     benchmark(run1)
-    assert benchmark.stats["max"] < 0.1
 
 
+@pytest.mark.benchmark
 def test_sys2(sys2: System, benchmark):
     """Benchmark 2"""
 
@@ -42,4 +43,3 @@ def test_sys2(sys2: System, benchmark):
         sys2.solve()
 
     benchmark(run2)
-    assert benchmark.stats["max"] < 0.5

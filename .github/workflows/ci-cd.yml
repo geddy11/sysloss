@@ -44,6 +44,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: geddy11/sysloss
 
+      - name: Codspeed benchmark
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: pytest tests/ --codspeed
+          token: ${{ secrets.CODSPEED_TOKEN }}
+
       - name: Install Jupyter-book
         run: pip install jupyter-book==1.0.0 sphinx-autoapi matplotlib toml scipy rich rustworkx pandas numpy
 
