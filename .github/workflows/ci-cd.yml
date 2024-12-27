@@ -44,6 +44,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: geddy11/sysloss
 
+      - name: Codspeed dependencies
+        run: pip install pytest pytest-codspeed
+
       - name: Codspeed benchmark
         uses: CodSpeedHQ/action@v3
         with:

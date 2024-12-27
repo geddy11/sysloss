@@ -35,7 +35,7 @@ pillow = ">=9.3.0"
 pytest = "^8.0"
 pytest-cov = "^4.0"
 pytest-benchmark = "^4.0"
-pytest-codspeed = "^2.0"
+pytest-codspeed = ">=2.2"
 
 [tool.poetry.group.docs]
 optional = true
