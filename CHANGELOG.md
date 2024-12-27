@@ -1,4 +1,42 @@
-# Changelog
+# CHANGELOG
+
+
+## v1.8.1 (2024-12-27)
+
+### Build System
+
+- Add pytest-codspeed to dev dependencies
+  ([`eb14c66`](https://github.com/geddy11/sysloss/commit/eb14c662085a932322c5eb982ca7ca29174bbe29))
+
+### Continuous Integration
+
+- Add Codspeed benchmarking
+  ([`9914d8a`](https://github.com/geddy11/sysloss/commit/9914d8a079639d8deddf906bb7ec0790d6607c58))
+
+- Add CodSpeed dependencies
+  ([`1b1d522`](https://github.com/geddy11/sysloss/commit/1b1d5226285f591aca10f0a049b5d01b43405602))
+
+- Add matplotlib to CodSpeed
+  ([`9045184`](https://github.com/geddy11/sysloss/commit/90451846cb565091202d6fbde25f63fb36eb73a4))
+
+- Add missing dependencies for CodSpeed
+  ([`26e449b`](https://github.com/geddy11/sysloss/commit/26e449b25189c6f2ce1c2909dbce366d47ce9d1d))
+
+- Add pydot to CodSpeed deps
+  ([`52eb41d`](https://github.com/geddy11/sysloss/commit/52eb41d57bdc24df8df44c9aa6f1da4afd33fa27))
+
+- Add tqdm to CodSpeed deps.
+  ([`c681974`](https://github.com/geddy11/sysloss/commit/c681974a5d7b26eb8800dcaa554d3cf57cdc9891))
+
+### Documentation
+
+- Add changelog to documentation
+  ([`1836349`](https://github.com/geddy11/sysloss/commit/18363498cecfe210a3f652925bef3a5cf7f251ee))
+
+### Performance Improvements
+
+- Add benchmark tests
+  ([`0ba69e6`](https://github.com/geddy11/sysloss/commit/0ba69e68f17cfbb4084bdbbd04c6145510cea363))
 
 
 ## v1.8.0 (2024-12-21)
