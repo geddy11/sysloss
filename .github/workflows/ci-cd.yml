@@ -45,7 +45,7 @@ jobs:
           slug: geddy11/sysloss
 
       - name: Codspeed dependencies
-        run: pip install pytest pytest-codspeed
+        run: pip install pytest pytest-codspeed numpy toml rustworkx scipy pandas
 
       - name: Codspeed benchmark
         uses: CodSpeedHQ/action@v3
