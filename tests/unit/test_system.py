@@ -22,8 +22,6 @@
 
 import pytest
 import numpy as np
-import rich
-
 import matplotlib
 from sysloss.system import System
 from sysloss.components import *
