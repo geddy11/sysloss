@@ -33,7 +33,6 @@ from PIL import Image
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
-from prefixed import Float
 
 
 __all__ = ["get_conf", "make_diag", "make_hdiag"]
