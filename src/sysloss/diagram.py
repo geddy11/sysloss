@@ -61,7 +61,7 @@ _DEF_CLUSTER_CONF = {
 }
 _DEF_NODE_CONF = {
     "default": {
-        "fillcolor": "white",
+        "fillcolor": "gray95",
         "style": "filled",
         "shape": "box",
         "penwidth": "1.5",

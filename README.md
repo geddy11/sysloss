@@ -61,6 +61,12 @@ sd.make_diag(bts, fname="bts.png")
 ```
 ![tree](https://github.com/geddy11/sysloss/raw/main/docs/bts-tree.png)
 
+And heat diagrams:
+```python
+sd.make_hdiag(bts, fname="bts-heat.png")
+```
+![heat](https://github.com/geddy11/sysloss/raw/main/docs/bts-heat-tree.png)
+
 ## Documentation
 The [documentation](https://sysloss.readthedocs.io/en/latest/Getting%20started.html) includes tutorials in the form of Jupyter notebooks, located in docs/nb.
 
