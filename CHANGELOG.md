@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v1.9.0 (2024-12-30)
+
+### Documentation
+
+- Add heat diagram to "Power tree diagrams" tutorial, set default font to Arial and default
+  component color to light gray
+  ([`9792759`](https://github.com/geddy11/sysloss/commit/9792759d34086b866c42abf7410baa887dda6d95))
+
+- Add PCB trace resistance to PCIe FPGA tutorial
+  ([`8c505dc`](https://github.com/geddy11/sysloss/commit/8c505dc46ba5a6fc8ef41ac654365e92696949f4))
+
+- Include highlights only in rtd changelog
+  ([`7421be3`](https://github.com/geddy11/sysloss/commit/7421be3049833883fba5df5716a07382cad1c013))
+
+### Features
+
+- Add heat diagram function, make_hdiag(), to diagram package
+  ([`2e4a563`](https://github.com/geddy11/sysloss/commit/2e4a56365bf62481578d025e6ff3de0a4950849e))
+
+- Add utils package with trace_REs() function
+  ([`c1606ad`](https://github.com/geddy11/sysloss/commit/c1606ad7a9ef084aef7f8469a075f6a6a56c5ddd))
+
+### Refactoring
+
+- Remove unused package
+  ([`04d1e61`](https://github.com/geddy11/sysloss/commit/04d1e613e6569290cdf5e3494515e3f5dbce16a4))
+
+
 ## v1.8.1 (2024-12-27)
 
 ### Build System
