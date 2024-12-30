@@ -125,10 +125,10 @@ def _prep_loss(loss: pd.DataFrame, phases: dict = {}) -> pd.DataFrame:
     """Calculate loss and color for each component"""
     if phases != {}:
         df2 = loss[loss.Type != ""][["Component", "Loss (W)", "Phase"]]
-        avg, w = np.zeros(len(df2) // len(phases), dtype=np.float64), 0.0
+        avg, w = np.zeros(len(df2) // len(phases), dtype=np.dtype(float)), 0.0
         for key in phases.keys():
             avg += phases[key] * df2[df2.Phase == key]["Loss (W)"].to_numpy().astype(
-                np.float64
+                np.dtype(float)
             )
             w += phases[key]
         avg = avg / w
