@@ -138,6 +138,8 @@ def _prep_loss(loss: pd.DataFrame, phases: dict = {}) -> pd.DataFrame:
         df = loss[loss.Type != ""][["Component", "Loss (W)"]].copy()
 
     maxloss = df["Loss (W)"].max()
+    if maxloss == 0.0:
+        maxloss = 1.0
     df["Mix"] = df["Loss (W)"].to_numpy() / maxloss
     return df
 

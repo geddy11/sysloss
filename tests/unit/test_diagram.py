@@ -109,3 +109,5 @@ def test_case2():
     bl_pwr = {"stdby": 0.1, "move": 455, "turn": 650}
     tsys.set_comp_phases("Bigload2", phase_conf=bl_pwr)
     assert make_hdiag(tsys) != None, "Check heat image w/phases generation"
+    noloss = System("noloss", Source("48V", vo=48))
+    assert make_hdiag(noloss) != None, "Check heat image generation with no losses"
