@@ -254,7 +254,7 @@ def make_diag(sys: System, *, fname: str = None, group: bool = True, config: dic
     """Create power tree diagram.
 
     The default diagram is rendered as a top-bottom diagram with components represented
-    as white, square boxes. Shapes and colors can be configured using an attribute dict.
+    as light-grey, square boxes. Shapes and colors can be configured using an attribute dict.
 
     Parameters
     ----------
