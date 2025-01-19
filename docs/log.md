@@ -2,6 +2,10 @@
 
 Important changes from the changelog are summarized here. See GitHub repository for [detailed changelog](https://github.com/geddy11/sysloss/blob/main/CHANGELOG.md).
 
+## Version 1.10
+New features:
+  * Add `plane_res()` function to `utils`package
+
 ## Version 1.9
 New features:
   * `utils` package. Function for calculating PCB trace resistance

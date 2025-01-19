@@ -39,3 +39,11 @@ def test_case1():
         temp=70,
     )
     assert np.allclose([rs1], [rs * (1 + 50 * TCR)]), "Resistance at 70C"
+
+
+def test_case2():
+    """Check plane_res()"""
+    rs = plane_res(w=25, l=125, t_mm=2 * OZ2MM)
+    assert np.allclose([rs], [0.00123857692]), "Resistance at default temp"
+    rs1 = plane_res(w=25, l=125, t_mm=2 * OZ2MM, temp=70)
+    assert np.allclose([rs1], [rs * (1 + 50 * TCR)]), "Resistance at 70C"
