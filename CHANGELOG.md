@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v1.10.0 (2025-01-19)
+
+### Bug Fixes
+
+- Divide by zero in make_hdiag() when system has no losses
+  ([`1036877`](https://github.com/geddy11/sysloss/commit/1036877eaf64498d407ae49296fa281fe17d6e2c))
+
+### Documentation
+
+- Correct make_diag() docstring
+  ([`f947070`](https://github.com/geddy11/sysloss/commit/f947070680f64b9d1cf4bd832d571366a601aa8a))
+
+### Features
+
+- Add plane_res() function to utils package
+  ([`a7ffd49`](https://github.com/geddy11/sysloss/commit/a7ffd49821663eaaf84bd866925a0ccc58766b6c))
+
+### Refactoring
+
+- Add pytest package to test_utils.py
+  ([`65159e9`](https://github.com/geddy11/sysloss/commit/65159e97967f0c9e24a3c6d7a535abc70ef57cc1))
+
+- Change dtype in _prep_loss()
+  ([`7c8a463`](https://github.com/geddy11/sysloss/commit/7c8a463c77696cc5bede3090cfaf295a3193d72b))
+
+
 ## v1.9.0 (2024-12-30)
 
 ### Documentation
