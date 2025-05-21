@@ -45,7 +45,7 @@ jobs:
           slug: geddy11/sysloss
 
       - name: Codspeed dependencies
-        run: pip install pytest pytest-codspeed numpy toml rustworkx scipy pandas matplotlib tqdm pydot
+        run: pip install pytest pytest-codspeed numpy toml rustworkx scipy pandas matplotlib tqdm pydot==3.0.4
 
       - name: Codspeed benchmark
         uses: CodSpeedHQ/action@v3
@@ -54,7 +54,7 @@ jobs:
           token: ${{ secrets.CODSPEED_TOKEN }}
 
       - name: Install Jupyter-book
-        run: pip install jupyter-book==1.0.0 sphinx-autoapi matplotlib toml scipy rich rustworkx pandas numpy
+        run: pip install jupyter-book==1.0.3 sphinx-autoapi matplotlib toml scipy rich rustworkx pandas numpy
 
       - name: Create Sphinx configuration
         run: jupyter-book config sphinx docs

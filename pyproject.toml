@@ -28,7 +28,7 @@ toml = ">=0.10.2"
 matplotlib = "^3.0"
 tqdm = ">=4.63"
 packaging = ">=21.1"
-pydot = ">=3.0.0"
+pydot = "^3.0"
 pillow = ">=9.3.0"
 
 [tool.poetry.dev-dependencies]
@@ -49,7 +49,7 @@ toml = ">=0.10.2"
 matplotlib = "^3.0"
 tqdm = ">=4.63"
 packaging = ">=21.1"
-pydot = ">=3.0.0"
+pydot = "^3.0"
 pillow = ">=9.3.0"
 
 [tool.semantic_release]
