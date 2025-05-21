@@ -22,7 +22,7 @@
 
 """Power tree diagrams.
 
-Graphviz is used to render power tree diagrams in sysLoss. 
+Graphviz is used to render power tree diagrams in sysLoss.
 The diagrams can be customized with the full range of Graphviz attributes.
 """
 
