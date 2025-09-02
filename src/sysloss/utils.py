@@ -128,7 +128,7 @@ def plane_res(
     --------
     >>> rs = plane_res(w=25, l=80, t_mm=35e-3)
     >>> # convert dimension oz/ft^2 to mm by predefined constant:
-    >>> rs = trace_res(w=800, l=500, t_mm==2*OZ2MM, temp=50)
+    >>> rs = plane_res(w=800, l=500, t_mm==2*OZ2MM, temp=50)
     """
 
     rs = rho / (t_mm / 1e3)
