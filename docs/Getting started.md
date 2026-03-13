@@ -52,6 +52,12 @@ sd.make_diag(bts, fname="bts.png")
 ```
 ![tree](bts-tree.png)
 
+And heat diagrams:
+```python
+sd.make_hdiag(bts, fname="bts-heat.png")
+```
+![heat](bts-heat-tree.png)
+
 ## Next step
 The best way to learn `sysLoss` is to explore the tutorials section. The tutorials are Jupyter Notebooks that can also be found in the GitHub repository under docs/nb.
 
