@@ -34,9 +34,7 @@ import pandas as pd
 import numpy as np
 import matplotlib as mpl
 
-
 __all__ = ["get_conf", "make_diag", "make_hdiag"]
-
 
 _DEF_GRAPH_CONF = {
     "rankdir": "TB",

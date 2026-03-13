@@ -22,7 +22,6 @@
 
 """:py:class:`~system.System` is the primary class for power analysis."""
 
-
 import rustworkx as rx
 import numpy as np
 from rich.tree import Tree
