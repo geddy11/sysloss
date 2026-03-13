@@ -24,6 +24,8 @@ or
 $ conda install conda-forge::sysloss
 ```
 
+On Windows, make sure Graphviz is installed and availale on PATH.
+
 ## Usage
 Analyze the power tree of a simple battery-powered bluetooth sensor:
 ```python
