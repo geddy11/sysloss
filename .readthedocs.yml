@@ -12,6 +12,7 @@ build:
     - graphviz
   tools:
     python: "3.11"
+    nodejs: "20"
   jobs:
     post_create_environment:
       # Install poetry et.al.
