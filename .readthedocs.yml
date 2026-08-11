@@ -18,7 +18,6 @@ build:
       # Install poetry et.al.
       # https://python-poetry.org/docs/#installing-manually
       - pip install poetry jupyter-book==1.0.4 sphinx-autoapi toml numpy pandas rustworkx scipy rich matplotlib tqdm ipywidgets graphviz packaging pydot pillow
-      #- pip install --upgrade jupyter
       # Tell poetry to not use a virtual environment
       - poetry config virtualenvs.create false
     post_install:
