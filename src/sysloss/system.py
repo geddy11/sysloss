@@ -1120,9 +1120,9 @@ class System:
                 pener += [self._calc_energy(ph, pwr)]
             # if only one subsystem, delete subsystem row and domain column
             if len(sources) < 2:
-                df.drop(len(df) - 2, inplace=True)
-                df.drop(columns="Domain", inplace=True)
-                df.reset_index(inplace=True, drop=True)
+                df = df.drop(len(df) - 2)
+                df = df.drop(columns="Domain")
+                df = df.reset_index(drop=True)
             frames += [df]
 
         if len(phase_list) > 1:
